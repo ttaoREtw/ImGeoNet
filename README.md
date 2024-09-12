@@ -3,6 +3,15 @@
 Paper link: https://arxiv.org/abs/2308.09098  
 Project page: https://ttaoretw.github.io/imgeonet/  
 
+## Performance
+| Dataset     | mAP@0.25 | mAP@0.5  | Log |
+| --------    | :------: | :------: | --- |
+| ScanNet     | 54.57    | 28.94    | [link](logs/scannet.txt) |
+| ScanNet200  | 22.38    | 9.67     | [link](logs/scannet200.txt) |
+| ARKitScenes | 59.82    | 42.76    | [link](logs/arkit.txt) |
+
+> Performance may vary slightly depending on the number of GPUs.
+
 
 ## Environment
 
