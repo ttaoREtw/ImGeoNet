@@ -1,0 +1,1200 @@
+2023-02-01 10:23:57,179 - mmdet - INFO - Environment info:
+------------------------------------------------------------
+sys.platform: linux
+Python: 3.8.16 (default, Jan 17 2023, 23:13:24) [GCC 11.2.0]
+CUDA available: True
+GPU 0,1,2,3: Tesla P40
+CUDA_HOME: /usr/local/cuda
+NVCC: Cuda compilation tools, release 10.0, V10.0.130
+GCC: gcc (Ubuntu 7.4.0-1ubuntu1~18.04.1) 7.4.0
+PyTorch: 1.7.1+cu110
+PyTorch compiling details: PyTorch built with:
+  - GCC 7.3
+  - C++ Version: 201402
+  - Intel(R) Math Kernel Library Version 2020.0.0 Product Build 20191122 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v1.6.0 (Git Hash 5ef631a030a6f73131c77892041042805a06064f)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - NNPACK is enabled
+  - CPU capability usage: AVX2
+  - CUDA Runtime 11.0
+  - NVCC architecture flags: -gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80
+  - CuDNN 8.0.5
+  - Magma 2.5.2
+  - Build settings: BLAS=MKL, BUILD_TYPE=Release, CXX_FLAGS= -Wno-deprecated -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -DUSE_VULKAN_WRAPPER -O2 -fPIC -Wno-narrowing -Wall -Wextra -Werror=return-type -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-local-typedefs -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Wno-stringop-overflow, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, USE_CUDA=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, 
+
+TorchVision: 0.8.2+cu110
+OpenCV: 4.7.0
+MMCV: 1.2.7
+MMCV Compiler: GCC 7.3
+MMCV CUDA Compiler: 11.0
+MMDetection: 2.10.0
+MMDetection3D: 0.8.0+a75dd1a
+------------------------------------------------------------
+
+2023-02-01 10:23:57,179 - mmdet - INFO - Distributed training: True
+2023-02-01 10:23:58,150 - mmdet - INFO - Config:
+model = dict(
+    type='ImVoxelNet',
+    pretrained='torchvision://resnet50',
+    backbone=dict(
+        type='ResNet',
+        depth=50,
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),
+        frozen_stages=1,
+        norm_cfg=dict(type='BN', requires_grad=False),
+        norm_eval=True,
+        style='pytorch'),
+    neck=dict(
+        type='FPN',
+        in_channels=[256, 512, 1024, 2048],
+        out_channels=256,
+        num_outs=4),
+    neck_3d=dict(
+        type='FastIndoorImVoxelNeck',
+        in_channels=256,
+        out_channels=128,
+        n_blocks=[1, 1, 1]),
+    bbox_head=dict(
+        type='ScanNetImVoxelHeadV2',
+        loss_bbox=dict(type='AxisAlignedIoULoss', loss_weight=1.0),
+        n_classes=18,
+        n_channels=128,
+        n_reg_outs=6,
+        n_scales=3,
+        limit=27,
+        centerness_topk=18),
+    occ_head=dict(
+        type='OccupancyHead',
+        in_channels=512,
+        hidden_channels=128,
+        n_blocks=[1, 1, 1],
+        loss=dict(
+            type='FocalLoss',
+            use_sigmoid=True,
+            gamma=2.0,
+            alpha=0.25,
+            loss_weight=10.0)),
+    voxel_size=(0.16, 0.16, 0.16),
+    n_voxels=(40, 40, 16),
+    depth_cast_margin=4)
+train_cfg = dict()
+test_cfg = dict(nms_pre=1000, iou_thr=0.25, score_thr=0.01)
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+dataset_type = 'ScanNetMultiViewDataset'
+data_root = 'data/scannet/'
+class_names = ('cabinet', 'bed', 'chair', 'sofa', 'table', 'door', 'window',
+               'bookshelf', 'picture', 'counter', 'desk', 'curtain',
+               'refrigerator', 'showercurtrain', 'toilet', 'sink', 'bathtub',
+               'garbagebin')
+train_pipeline = [
+    dict(type='LoadAnnotations3D'),
+    dict(
+        type='MultiViewPipeline',
+        n_images=20,
+        transforms=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', img_scale=(640, 480), keep_ratio=True),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='Pad', size=(480, 640))
+        ]),
+    dict(type='LoadDepthMap', depth_shift=1000.0),
+    dict(type='RandomShiftOrigin', std=(0.7, 0.7, 0.0)),
+    dict(
+        type='DefaultFormatBundle3D',
+        class_names=('cabinet', 'bed', 'chair', 'sofa', 'table', 'door',
+                     'window', 'bookshelf', 'picture', 'counter', 'desk',
+                     'curtain', 'refrigerator', 'showercurtrain', 'toilet',
+                     'sink', 'bathtub', 'garbagebin')),
+    dict(
+        type='Collect3D',
+        keys=[
+            'img', 'depth_maps', 'depth_masks', 'gt_bboxes_3d', 'gt_labels_3d'
+        ])
+]
+test_pipeline = [
+    dict(
+        type='MultiViewPipeline',
+        n_images=50,
+        transforms=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', img_scale=(640, 480), keep_ratio=True),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='Pad', size=(480, 640))
+        ]),
+    dict(type='LoadDepthMap', depth_shift=1000.0),
+    dict(
+        type='DefaultFormatBundle3D',
+        class_names=('cabinet', 'bed', 'chair', 'sofa', 'table', 'door',
+                     'window', 'bookshelf', 'picture', 'counter', 'desk',
+                     'curtain', 'refrigerator', 'showercurtrain', 'toilet',
+                     'sink', 'bathtub', 'garbagebin'),
+        with_label=False),
+    dict(type='Collect3D', keys=['img', 'depth_maps', 'depth_masks'])
+]
+data = dict(
+    samples_per_gpu=1,
+    workers_per_gpu=1,
+    train=dict(
+        type='RepeatDataset',
+        times=3,
+        dataset=dict(
+            type='ScanNetMultiViewDataset',
+            data_root='data/scannet/',
+            ann_file='data/scannet/scannet_infos_train.pkl',
+            pipeline=[
+                dict(type='LoadAnnotations3D'),
+                dict(
+                    type='MultiViewPipeline',
+                    n_images=20,
+                    transforms=[
+                        dict(type='LoadImageFromFile'),
+                        dict(
+                            type='Resize',
+                            img_scale=(640, 480),
+                            keep_ratio=True),
+                        dict(
+                            type='Normalize',
+                            mean=[123.675, 116.28, 103.53],
+                            std=[58.395, 57.12, 57.375],
+                            to_rgb=True),
+                        dict(type='Pad', size=(480, 640))
+                    ]),
+                dict(type='LoadDepthMap', depth_shift=1000.0),
+                dict(type='RandomShiftOrigin', std=(0.7, 0.7, 0.0)),
+                dict(
+                    type='DefaultFormatBundle3D',
+                    class_names=('cabinet', 'bed', 'chair', 'sofa', 'table',
+                                 'door', 'window', 'bookshelf', 'picture',
+                                 'counter', 'desk', 'curtain', 'refrigerator',
+                                 'showercurtrain', 'toilet', 'sink', 'bathtub',
+                                 'garbagebin')),
+                dict(
+                    type='Collect3D',
+                    keys=[
+                        'img', 'depth_maps', 'depth_masks', 'gt_bboxes_3d',
+                        'gt_labels_3d'
+                    ])
+            ],
+            classes=('cabinet', 'bed', 'chair', 'sofa', 'table', 'door',
+                     'window', 'bookshelf', 'picture', 'counter', 'desk',
+                     'curtain', 'refrigerator', 'showercurtrain', 'toilet',
+                     'sink', 'bathtub', 'garbagebin'),
+            filter_empty_gt=True,
+            box_type_3d='Depth')),
+    val=dict(
+        type='ScanNetMultiViewDataset',
+        data_root='data/scannet/',
+        ann_file='data/scannet/scannet_infos_val.pkl',
+        pipeline=[
+            dict(
+                type='MultiViewPipeline',
+                n_images=50,
+                transforms=[
+                    dict(type='LoadImageFromFile'),
+                    dict(type='Resize', img_scale=(640, 480), keep_ratio=True),
+                    dict(
+                        type='Normalize',
+                        mean=[123.675, 116.28, 103.53],
+                        std=[58.395, 57.12, 57.375],
+                        to_rgb=True),
+                    dict(type='Pad', size=(480, 640))
+                ]),
+            dict(type='LoadDepthMap', depth_shift=1000.0),
+            dict(
+                type='DefaultFormatBundle3D',
+                class_names=('cabinet', 'bed', 'chair', 'sofa', 'table',
+                             'door', 'window', 'bookshelf', 'picture',
+                             'counter', 'desk', 'curtain', 'refrigerator',
+                             'showercurtrain', 'toilet', 'sink', 'bathtub',
+                             'garbagebin'),
+                with_label=False),
+            dict(type='Collect3D', keys=['img', 'depth_maps', 'depth_masks'])
+        ],
+        classes=('cabinet', 'bed', 'chair', 'sofa', 'table', 'door', 'window',
+                 'bookshelf', 'picture', 'counter', 'desk', 'curtain',
+                 'refrigerator', 'showercurtrain', 'toilet', 'sink', 'bathtub',
+                 'garbagebin'),
+        test_mode=True,
+        box_type_3d='Depth'),
+    test=dict(
+        type='ScanNetMultiViewDataset',
+        data_root='data/scannet/',
+        ann_file='data/scannet/scannet_infos_val.pkl',
+        pipeline=[
+            dict(
+                type='MultiViewPipeline',
+                n_images=50,
+                transforms=[
+                    dict(type='LoadImageFromFile'),
+                    dict(type='Resize', img_scale=(640, 480), keep_ratio=True),
+                    dict(
+                        type='Normalize',
+                        mean=[123.675, 116.28, 103.53],
+                        std=[58.395, 57.12, 57.375],
+                        to_rgb=True),
+                    dict(type='Pad', size=(480, 640))
+                ]),
+            dict(type='LoadDepthMap', depth_shift=1000.0),
+            dict(
+                type='DefaultFormatBundle3D',
+                class_names=('cabinet', 'bed', 'chair', 'sofa', 'table',
+                             'door', 'window', 'bookshelf', 'picture',
+                             'counter', 'desk', 'curtain', 'refrigerator',
+                             'showercurtrain', 'toilet', 'sink', 'bathtub',
+                             'garbagebin'),
+                with_label=False),
+            dict(type='Collect3D', keys=['img', 'depth_maps', 'depth_masks'])
+        ],
+        classes=('cabinet', 'bed', 'chair', 'sofa', 'table', 'door', 'window',
+                 'bookshelf', 'picture', 'counter', 'desk', 'curtain',
+                 'refrigerator', 'showercurtrain', 'toilet', 'sink', 'bathtub',
+                 'garbagebin'),
+        test_mode=True,
+        box_type_3d='Depth'))
+optimizer = dict(
+    type='AdamW',
+    lr=0.0001,
+    weight_decay=0.0001,
+    paramwise_cfg=dict(
+        custom_keys=dict(backbone=dict(lr_mult=0.1, decay_mult=1.0))))
+optimizer_config = dict(grad_clip=dict(max_norm=35.0, norm_type=2))
+total_epochs = 12
+lr_config = dict(policy='step', step=[8, 11])
+checkpoint_config = dict(interval=1, max_keep_ckpts=12)
+log_config = dict(
+    interval=50,
+    hooks=[dict(type='TextLoggerHook'),
+           dict(type='TensorboardLoggerHook')])
+evaluation = dict(interval=1)
+dist_params = dict(backend='nccl')
+find_unused_parameters = True
+log_level = 'INFO'
+load_from = None
+resume_from = None
+workflow = [('train', 1)]
+work_dir = '/vc_data/users/shunpochuang/ttao/exps/scannet/occ_scannet_3'
+gpu_ids = range(0, 1)
+
+2023-02-01 10:23:58,150 - mmdet - INFO - Set random seed to 0, deterministic: False
+2023-02-01 10:23:59,281 - mmdet - INFO - load model from: torchvision://resnet50
+2023-02-01 10:23:59,282 - mmdet - INFO - Use load_from_torchvision loader
+2023-02-01 10:23:59,630 - mmdet - WARNING - The model and loaded state dict do not match exactly
+
+unexpected key in source state_dict: fc.weight, fc.bias
+
+2023-02-01 10:23:59,662 - mmdet - INFO - Model:
+ImVoxelNet(
+  (backbone): ResNet(
+    (conv1): Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+    (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu): ReLU(inplace=True)
+    (maxpool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+    (layer1): ResLayer(
+      (0): Bottleneck(
+        (conv1): Conv2d(64, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (downsample): Sequential(
+          (0): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+          (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(256, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(256, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+    )
+    (layer2): ResLayer(
+      (0): Bottleneck(
+        (conv1): Conv2d(256, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (downsample): Sequential(
+          (0): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+          (1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (3): Bottleneck(
+        (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+    )
+    (layer3): ResLayer(
+      (0): Bottleneck(
+        (conv1): Conv2d(512, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (downsample): Sequential(
+          (0): Conv2d(512, 1024, kernel_size=(1, 1), stride=(2, 2), bias=False)
+          (1): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (3): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (4): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (5): Bottleneck(
+        (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+    )
+    (layer4): ResLayer(
+      (0): Bottleneck(
+        (conv1): Conv2d(1024, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (downsample): Sequential(
+          (0): Conv2d(1024, 2048, kernel_size=(1, 1), stride=(2, 2), bias=False)
+          (1): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): Bottleneck(
+        (conv1): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+      (2): Bottleneck(
+        (conv1): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+      )
+    )
+  )
+  (neck): FPN(
+    (lateral_convs): ModuleList(
+      (0): ConvModule(
+        (conv): Conv2d(256, 256, kernel_size=(1, 1), stride=(1, 1))
+      )
+      (1): ConvModule(
+        (conv): Conv2d(512, 256, kernel_size=(1, 1), stride=(1, 1))
+      )
+      (2): ConvModule(
+        (conv): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1))
+      )
+      (3): ConvModule(
+        (conv): Conv2d(2048, 256, kernel_size=(1, 1), stride=(1, 1))
+      )
+    )
+    (fpn_convs): ModuleList(
+      (0): ConvModule(
+        (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (1): ConvModule(
+        (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (2): ConvModule(
+        (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): ConvModule(
+        (conv): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+  )
+  (neck_3d): FastIndoorImVoxelNeck(
+    (down_layer_0): Sequential(
+      (0): BasicBlock3dV2(
+        (conv1): Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (norm1): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (conv2): Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (norm2): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (out_block_0): Sequential(
+      (0): Conv3d(256, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+    (down_layer_1): Sequential(
+      (0): BasicBlock3dV2(
+        (conv1): Conv3d(256, 512, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), bias=False)
+        (norm1): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (conv2): Conv3d(512, 512, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (norm2): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (downsample): Sequential(
+          (0): Conv3d(256, 512, kernel_size=(1, 1, 1), stride=(2, 2, 2), bias=False)
+          (1): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+    )
+    (up_block_1): Sequential(
+      (0): ConvTranspose3d(512, 256, kernel_size=(2, 2, 2), stride=(2, 2, 2), bias=False)
+      (1): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (4): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+    (out_block_1): Sequential(
+      (0): Conv3d(512, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+    (down_layer_2): Sequential(
+      (0): BasicBlock3dV2(
+        (conv1): Conv3d(512, 1024, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), bias=False)
+        (norm1): BatchNorm3d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (relu): ReLU(inplace=True)
+        (conv2): Conv3d(1024, 1024, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (norm2): BatchNorm3d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (downsample): Sequential(
+          (0): Conv3d(512, 1024, kernel_size=(1, 1, 1), stride=(2, 2, 2), bias=False)
+          (1): BatchNorm3d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+    )
+    (up_block_2): Sequential(
+      (0): ConvTranspose3d(1024, 512, kernel_size=(2, 2, 2), stride=(2, 2, 2), bias=False)
+      (1): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+      (3): Conv3d(512, 512, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (4): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace=True)
+    )
+    (out_block_2): Sequential(
+      (0): Conv3d(1024, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+      (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace=True)
+    )
+  )
+  (bbox_head): ScanNetImVoxelHeadV2(
+    (loss_centerness): CrossEntropyLoss()
+    (loss_bbox): AxisAlignedIoULoss()
+    (loss_cls): FocalLoss()
+    (centerness_conv): Conv3d(128, 1, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+    (reg_conv): Conv3d(128, 6, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+    (cls_conv): Conv3d(128, 18, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
+    (scales): ModuleList(
+      (0): Scale()
+      (1): Scale()
+      (2): Scale()
+    )
+  )
+  (occ_head): OccupancyHead(
+    (pre_proj): Sequential(
+      (0): Conv3d(512, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
+      (1): LeakyReLU(negative_slope=0.01)
+    )
+    (net): OccupancyNet(
+      (down_layer_0): Sequential(
+        (0): BasicBlock3dV2(
+          (conv1): Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (norm1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (relu): ReLU(inplace=True)
+          (conv2): Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (norm2): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (out_block_0): Sequential(
+        (0): Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+      )
+      (down_layer_1): Sequential(
+        (0): BasicBlock3dV2(
+          (conv1): Conv3d(128, 256, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), bias=False)
+          (norm1): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (relu): ReLU(inplace=True)
+          (conv2): Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (norm2): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (downsample): Sequential(
+            (0): Conv3d(128, 256, kernel_size=(1, 1, 1), stride=(2, 2, 2), bias=False)
+            (1): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (up_block_1): Sequential(
+        (0): ConvTranspose3d(256, 128, kernel_size=(2, 2, 2), stride=(2, 2, 2), bias=False)
+        (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (4): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (5): ReLU(inplace=True)
+      )
+      (out_block_1): Sequential(
+        (0): Conv3d(256, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+      )
+      (down_layer_2): Sequential(
+        (0): BasicBlock3dV2(
+          (conv1): Conv3d(256, 512, kernel_size=(3, 3, 3), stride=(2, 2, 2), padding=(1, 1, 1), bias=False)
+          (norm1): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (relu): ReLU(inplace=True)
+          (conv2): Conv3d(512, 512, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (norm2): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (downsample): Sequential(
+            (0): Conv3d(256, 512, kernel_size=(1, 1, 1), stride=(2, 2, 2), bias=False)
+            (1): BatchNorm3d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+        )
+      )
+      (up_block_2): Sequential(
+        (0): ConvTranspose3d(512, 256, kernel_size=(2, 2, 2), stride=(2, 2, 2), bias=False)
+        (1): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+        (3): Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (4): BatchNorm3d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (5): ReLU(inplace=True)
+      )
+      (out_block_2): Sequential(
+        (0): Conv3d(512, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (1): BatchNorm3d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (2): ReLU(inplace=True)
+      )
+    )
+    (post_proj): Conv3d(128, 1, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+    (loss): FocalLoss()
+  )
+)
+2023-02-01 10:24:01,835 - mmdet - INFO - Start running, host: shunpochuang@919c6e6bcddb4711bab84f9ffd0b02db-master-0, work_dir: /vc_data/users/shunpochuang/ttao/exps/scannet/occ_scannet_3
+2023-02-01 10:24:01,835 - mmdet - INFO - workflow: [('train', 1)], max: 12 epochs
+2023-02-01 10:25:34,997 - mmdet - INFO - Epoch [1][50/901]	lr: 1.000e-04, eta: 5:33:48, time: 1.861, data_time: 0.102, memory: 10776, loss_occ: 0.5898, acc_occ: 0.8265, loss_centerness: 0.6597, loss_bbox: 0.7127, loss_cls: 0.7364, loss: 2.6986, grad_norm: 8.9718
+2023-02-01 10:27:03,688 - mmdet - INFO - Epoch [1][100/901]	lr: 1.000e-04, eta: 5:24:28, time: 1.774, data_time: 0.021, memory: 10776, loss_occ: 0.5205, acc_occ: 0.8441, loss_centerness: 0.6511, loss_bbox: 0.6658, loss_cls: 0.5683, loss: 2.4057, grad_norm: 5.3456
+2023-02-01 10:28:32,429 - mmdet - INFO - Epoch [1][150/901]	lr: 1.000e-04, eta: 5:20:25, time: 1.775, data_time: 0.022, memory: 10776, loss_occ: 0.4917, acc_occ: 0.8549, loss_centerness: 0.6501, loss_bbox: 0.6518, loss_cls: 0.5421, loss: 2.3358, grad_norm: 5.1898
+2023-02-01 10:30:01,240 - mmdet - INFO - Epoch [1][200/901]	lr: 1.000e-04, eta: 5:17:44, time: 1.776, data_time: 0.021, memory: 10776, loss_occ: 0.5022, acc_occ: 0.8490, loss_centerness: 0.6469, loss_bbox: 0.6259, loss_cls: 0.5062, loss: 2.2812, grad_norm: 5.2639
+2023-02-01 10:31:30,008 - mmdet - INFO - Epoch [1][250/901]	lr: 1.000e-04, eta: 5:15:29, time: 1.775, data_time: 0.021, memory: 10776, loss_occ: 0.4705, acc_occ: 0.8604, loss_centerness: 0.6521, loss_bbox: 0.6071, loss_cls: 0.4851, loss: 2.2149, grad_norm: 5.5006
+2023-02-01 10:32:58,866 - mmdet - INFO - Epoch [1][300/901]	lr: 1.000e-04, eta: 5:13:33, time: 1.777, data_time: 0.021, memory: 10776, loss_occ: 0.4695, acc_occ: 0.8604, loss_centerness: 0.6453, loss_bbox: 0.6118, loss_cls: 0.4602, loss: 2.1867, grad_norm: 5.1006
+2023-02-01 10:34:28,027 - mmdet - INFO - Epoch [1][350/901]	lr: 1.000e-04, eta: 5:11:54, time: 1.783, data_time: 0.021, memory: 10776, loss_occ: 0.4615, acc_occ: 0.8686, loss_centerness: 0.6457, loss_bbox: 0.5972, loss_cls: 0.4478, loss: 2.1523, grad_norm: 5.3238
+2023-02-01 10:35:57,006 - mmdet - INFO - Epoch [1][400/901]	lr: 1.000e-04, eta: 5:10:12, time: 1.780, data_time: 0.021, memory: 10776, loss_occ: 0.4574, acc_occ: 0.8699, loss_centerness: 0.6447, loss_bbox: 0.5999, loss_cls: 0.4446, loss: 2.1466, grad_norm: 5.2157
+2023-02-01 10:37:25,770 - mmdet - INFO - Epoch [1][450/901]	lr: 1.000e-04, eta: 5:08:29, time: 1.775, data_time: 0.021, memory: 10776, loss_occ: 0.4420, acc_occ: 0.8739, loss_centerness: 0.6414, loss_bbox: 0.5920, loss_cls: 0.4205, loss: 2.0959, grad_norm: 5.0767
+2023-02-01 10:38:54,657 - mmdet - INFO - Epoch [1][500/901]	lr: 1.000e-04, eta: 5:06:51, time: 1.778, data_time: 0.021, memory: 10776, loss_occ: 0.4585, acc_occ: 0.8774, loss_centerness: 0.6402, loss_bbox: 0.5801, loss_cls: 0.4286, loss: 2.1074, grad_norm: 5.0531
+2023-02-01 10:40:23,660 - mmdet - INFO - Epoch [1][550/901]	lr: 1.000e-04, eta: 5:05:17, time: 1.780, data_time: 0.021, memory: 10776, loss_occ: 0.4496, acc_occ: 0.8769, loss_centerness: 0.6393, loss_bbox: 0.5782, loss_cls: 0.4207, loss: 2.0878, grad_norm: 5.1428
+2023-02-01 10:41:52,784 - mmdet - INFO - Epoch [1][600/901]	lr: 1.000e-04, eta: 5:03:45, time: 1.782, data_time: 0.021, memory: 10776, loss_occ: 0.4688, acc_occ: 0.8753, loss_centerness: 0.6406, loss_bbox: 0.5624, loss_cls: 0.3996, loss: 2.0714, grad_norm: 5.2202
+2023-02-01 10:43:22,258 - mmdet - INFO - Epoch [1][650/901]	lr: 1.000e-04, eta: 5:02:20, time: 1.789, data_time: 0.021, memory: 10776, loss_occ: 0.4347, acc_occ: 0.8846, loss_centerness: 0.6443, loss_bbox: 0.5646, loss_cls: 0.4143, loss: 2.0579, grad_norm: 5.2672
+2023-02-01 10:44:51,457 - mmdet - INFO - Epoch [1][700/901]	lr: 1.000e-04, eta: 5:00:50, time: 1.784, data_time: 0.021, memory: 10776, loss_occ: 0.4405, acc_occ: 0.8828, loss_centerness: 0.6409, loss_bbox: 0.5674, loss_cls: 0.4157, loss: 2.0644, grad_norm: 5.1764
+2023-02-01 10:46:20,975 - mmdet - INFO - Epoch [1][750/901]	lr: 1.000e-04, eta: 4:59:24, time: 1.790, data_time: 0.021, memory: 10776, loss_occ: 0.4340, acc_occ: 0.8827, loss_centerness: 0.6425, loss_bbox: 0.5514, loss_cls: 0.3914, loss: 2.0193, grad_norm: 5.3093
+2023-02-01 10:47:50,313 - mmdet - INFO - Epoch [1][800/901]	lr: 1.000e-04, eta: 4:57:55, time: 1.787, data_time: 0.022, memory: 10776, loss_occ: 0.4247, acc_occ: 0.8882, loss_centerness: 0.6401, loss_bbox: 0.5623, loss_cls: 0.3960, loss: 2.0231, grad_norm: 5.0760
+2023-02-01 10:49:19,477 - mmdet - INFO - Epoch [1][850/901]	lr: 1.000e-04, eta: 4:56:25, time: 1.783, data_time: 0.021, memory: 10776, loss_occ: 0.4378, acc_occ: 0.8881, loss_centerness: 0.6417, loss_bbox: 0.5462, loss_cls: 0.4007, loss: 2.0265, grad_norm: 5.4486
+2023-02-01 10:50:48,722 - mmdet - INFO - Epoch [1][900/901]	lr: 1.000e-04, eta: 4:54:55, time: 1.785, data_time: 0.021, memory: 10776, loss_occ: 0.4422, acc_occ: 0.8933, loss_centerness: 0.6388, loss_bbox: 0.5503, loss_cls: 0.3877, loss: 2.0190, grad_norm: 5.2989
+2023-02-01 10:50:50,609 - mmdet - INFO - Saving checkpoint at 1 epochs
+2023-02-01 10:53:42,942 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.6268  | 0.7661  | 0.2512  | 0.3991  |
+| table          | 0.3691  | 0.7286  | 0.0942  | 0.3257  |
+| desk           | 0.4542  | 0.9213  | 0.0884  | 0.4173  |
+| cabinet        | 0.1241  | 0.4866  | 0.0167  | 0.1290  |
+| sofa           | 0.4818  | 0.8557  | 0.0962  | 0.2784  |
+| window         | 0.0586  | 0.2589  | 0.0004  | 0.0177  |
+| garbagebin     | 0.1491  | 0.4094  | 0.0105  | 0.0868  |
+| counter        | 0.0900  | 0.5000  | 0.0000  | 0.0000  |
+| bed            | 0.7820  | 0.8765  | 0.4234  | 0.6049  |
+| door           | 0.1456  | 0.5011  | 0.0173  | 0.1306  |
+| bookshelf      | 0.1951  | 0.8442  | 0.0084  | 0.1688  |
+| refrigerator   | 0.2133  | 0.2982  | 0.0562  | 0.1228  |
+| sink           | 0.2840  | 0.5306  | 0.0093  | 0.1122  |
+| curtain        | 0.1136  | 0.3284  | 0.0015  | 0.0299  |
+| bathtub        | 0.4153  | 0.5484  | 0.2556  | 0.2903  |
+| toilet         | 0.7885  | 0.8448  | 0.4648  | 0.5345  |
+| showercurtrain | 0.1092  | 0.2857  | 0.0000  | 0.0000  |
+| picture        | 0.0021  | 0.0180  | 0.0000  | 0.0000  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.3001  | 0.5557  | 0.0997  | 0.2027  |
++----------------+---------+---------+---------+---------+
+2023-02-01 10:53:43,013 - mmdet - INFO - Epoch(val) [1][901]	chair_AP_0.25: 0.6268, table_AP_0.25: 0.3691, desk_AP_0.25: 0.4542, cabinet_AP_0.25: 0.1241, sofa_AP_0.25: 0.4818, window_AP_0.25: 0.0586, garbagebin_AP_0.25: 0.1491, counter_AP_0.25: 0.0900, bed_AP_0.25: 0.7820, door_AP_0.25: 0.1456, bookshelf_AP_0.25: 0.1951, refrigerator_AP_0.25: 0.2133, sink_AP_0.25: 0.2840, curtain_AP_0.25: 0.1136, bathtub_AP_0.25: 0.4153, toilet_AP_0.25: 0.7885, showercurtrain_AP_0.25: 0.1092, picture_AP_0.25: 0.0021, mAP_0.25: 0.3001, chair_rec_0.25: 0.7661, table_rec_0.25: 0.7286, desk_rec_0.25: 0.9213, cabinet_rec_0.25: 0.4866, sofa_rec_0.25: 0.8557, window_rec_0.25: 0.2589, garbagebin_rec_0.25: 0.4094, counter_rec_0.25: 0.5000, bed_rec_0.25: 0.8765, door_rec_0.25: 0.5011, bookshelf_rec_0.25: 0.8442, refrigerator_rec_0.25: 0.2982, sink_rec_0.25: 0.5306, curtain_rec_0.25: 0.3284, bathtub_rec_0.25: 0.5484, toilet_rec_0.25: 0.8448, showercurtrain_rec_0.25: 0.2857, picture_rec_0.25: 0.0180, mAR_0.25: 0.5557, chair_AP_0.50: 0.2512, table_AP_0.50: 0.0942, desk_AP_0.50: 0.0884, cabinet_AP_0.50: 0.0167, sofa_AP_0.50: 0.0962, window_AP_0.50: 0.0004, garbagebin_AP_0.50: 0.0105, counter_AP_0.50: 0.0000, bed_AP_0.50: 0.4234, door_AP_0.50: 0.0173, bookshelf_AP_0.50: 0.0084, refrigerator_AP_0.50: 0.0562, sink_AP_0.50: 0.0093, curtain_AP_0.50: 0.0015, bathtub_AP_0.50: 0.2556, toilet_AP_0.50: 0.4648, showercurtrain_AP_0.50: 0.0000, picture_AP_0.50: 0.0000, mAP_0.50: 0.0997, chair_rec_0.50: 0.3991, table_rec_0.50: 0.3257, desk_rec_0.50: 0.4173, cabinet_rec_0.50: 0.1290, sofa_rec_0.50: 0.2784, window_rec_0.50: 0.0177, garbagebin_rec_0.50: 0.0868, counter_rec_0.50: 0.0000, bed_rec_0.50: 0.6049, door_rec_0.50: 0.1306, bookshelf_rec_0.50: 0.1688, refrigerator_rec_0.50: 0.1228, sink_rec_0.50: 0.1122, curtain_rec_0.50: 0.0299, bathtub_rec_0.50: 0.2903, toilet_rec_0.50: 0.5345, showercurtrain_rec_0.50: 0.0000, picture_rec_0.50: 0.0000, mAR_0.50: 0.2027
+2023-02-01 10:55:15,145 - mmdet - INFO - Epoch [2][50/901]	lr: 1.000e-04, eta: 4:53:31, time: 1.833, data_time: 0.081, memory: 10776, loss_occ: 0.4387, acc_occ: 0.8839, loss_centerness: 0.6428, loss_bbox: 0.5380, loss_cls: 0.3727, loss: 1.9922, grad_norm: 4.9786
+2023-02-01 10:56:43,764 - mmdet - INFO - Epoch [2][100/901]	lr: 1.000e-04, eta: 4:51:55, time: 1.772, data_time: 0.020, memory: 10776, loss_occ: 0.4105, acc_occ: 0.8985, loss_centerness: 0.6437, loss_bbox: 0.5304, loss_cls: 0.3731, loss: 1.9577, grad_norm: 5.1598
+2023-02-01 10:58:12,470 - mmdet - INFO - Epoch [2][150/901]	lr: 1.000e-04, eta: 4:50:20, time: 1.774, data_time: 0.020, memory: 10776, loss_occ: 0.4279, acc_occ: 0.8942, loss_centerness: 0.6356, loss_bbox: 0.5338, loss_cls: 0.3695, loss: 1.9668, grad_norm: 4.9409
+2023-02-01 10:59:41,072 - mmdet - INFO - Epoch [2][200/901]	lr: 1.000e-04, eta: 4:48:46, time: 1.772, data_time: 0.020, memory: 10776, loss_occ: 0.4433, acc_occ: 0.8911, loss_centerness: 0.6394, loss_bbox: 0.5185, loss_cls: 0.3609, loss: 1.9621, grad_norm: 4.9292
+2023-02-01 11:01:10,006 - mmdet - INFO - Epoch [2][250/901]	lr: 1.000e-04, eta: 4:47:14, time: 1.779, data_time: 0.020, memory: 10776, loss_occ: 0.4326, acc_occ: 0.8934, loss_centerness: 0.6383, loss_bbox: 0.5342, loss_cls: 0.3768, loss: 1.9819, grad_norm: 4.7699
+2023-02-01 11:02:38,796 - mmdet - INFO - Epoch [2][300/901]	lr: 1.000e-04, eta: 4:45:42, time: 1.776, data_time: 0.021, memory: 10776, loss_occ: 0.4200, acc_occ: 0.8961, loss_centerness: 0.6373, loss_bbox: 0.5278, loss_cls: 0.3619, loss: 1.9470, grad_norm: 4.7241
+2023-02-01 11:04:07,454 - mmdet - INFO - Epoch [2][350/901]	lr: 1.000e-04, eta: 4:44:08, time: 1.773, data_time: 0.020, memory: 10776, loss_occ: 0.4265, acc_occ: 0.8957, loss_centerness: 0.6396, loss_bbox: 0.5199, loss_cls: 0.3526, loss: 1.9386, grad_norm: 4.8805
+2023-02-01 11:05:35,871 - mmdet - INFO - Epoch [2][400/901]	lr: 1.000e-04, eta: 4:42:34, time: 1.768, data_time: 0.020, memory: 10776, loss_occ: 0.4275, acc_occ: 0.8996, loss_centerness: 0.6383, loss_bbox: 0.5209, loss_cls: 0.3503, loss: 1.9370, grad_norm: 5.0653
+2023-02-01 11:07:04,624 - mmdet - INFO - Epoch [2][450/901]	lr: 1.000e-04, eta: 4:41:02, time: 1.775, data_time: 0.020, memory: 10776, loss_occ: 0.4138, acc_occ: 0.8946, loss_centerness: 0.6380, loss_bbox: 0.5116, loss_cls: 0.3458, loss: 1.9093, grad_norm: 4.5411
+2023-02-01 11:08:33,734 - mmdet - INFO - Epoch [2][500/901]	lr: 1.000e-04, eta: 4:39:33, time: 1.782, data_time: 0.020, memory: 10776, loss_occ: 0.4067, acc_occ: 0.9012, loss_centerness: 0.6389, loss_bbox: 0.5260, loss_cls: 0.3532, loss: 1.9248, grad_norm: 4.8673
+2023-02-01 11:10:02,563 - mmdet - INFO - Epoch [2][550/901]	lr: 1.000e-04, eta: 4:38:02, time: 1.777, data_time: 0.020, memory: 10776, loss_occ: 0.4156, acc_occ: 0.9017, loss_centerness: 0.6383, loss_bbox: 0.5079, loss_cls: 0.3620, loss: 1.9239, grad_norm: 5.2140
+2023-02-01 11:11:31,669 - mmdet - INFO - Epoch [2][600/901]	lr: 1.000e-04, eta: 4:36:33, time: 1.782, data_time: 0.020, memory: 10776, loss_occ: 0.4204, acc_occ: 0.8957, loss_centerness: 0.6400, loss_bbox: 0.5113, loss_cls: 0.3460, loss: 1.9176, grad_norm: 4.4370
+2023-02-01 11:13:00,710 - mmdet - INFO - Epoch [2][650/901]	lr: 1.000e-04, eta: 4:35:03, time: 1.781, data_time: 0.021, memory: 10776, loss_occ: 0.4298, acc_occ: 0.9018, loss_centerness: 0.6354, loss_bbox: 0.5100, loss_cls: 0.3434, loss: 1.9184, grad_norm: 4.9286
+2023-02-01 11:14:29,728 - mmdet - INFO - Epoch [2][700/901]	lr: 1.000e-04, eta: 4:33:34, time: 1.780, data_time: 0.020, memory: 10776, loss_occ: 0.4226, acc_occ: 0.8960, loss_centerness: 0.6387, loss_bbox: 0.5076, loss_cls: 0.3393, loss: 1.9082, grad_norm: 4.5904
+2023-02-01 11:15:58,437 - mmdet - INFO - Epoch [2][750/901]	lr: 1.000e-04, eta: 4:32:02, time: 1.774, data_time: 0.020, memory: 10776, loss_occ: 0.4141, acc_occ: 0.8972, loss_centerness: 0.6367, loss_bbox: 0.5026, loss_cls: 0.3413, loss: 1.8947, grad_norm: 4.7743
+2023-02-01 11:17:27,100 - mmdet - INFO - Epoch [2][800/901]	lr: 1.000e-04, eta: 4:30:31, time: 1.773, data_time: 0.020, memory: 10776, loss_occ: 0.4274, acc_occ: 0.8992, loss_centerness: 0.6378, loss_bbox: 0.4962, loss_cls: 0.3264, loss: 1.8878, grad_norm: 4.7583
+2023-02-01 11:18:55,955 - mmdet - INFO - Epoch [2][850/901]	lr: 1.000e-04, eta: 4:29:01, time: 1.777, data_time: 0.020, memory: 10776, loss_occ: 0.4143, acc_occ: 0.9026, loss_centerness: 0.6369, loss_bbox: 0.5000, loss_cls: 0.3312, loss: 1.8825, grad_norm: 4.9498
+2023-02-01 11:20:24,706 - mmdet - INFO - Epoch [2][900/901]	lr: 1.000e-04, eta: 4:27:30, time: 1.775, data_time: 0.020, memory: 10776, loss_occ: 0.4240, acc_occ: 0.9020, loss_centerness: 0.6387, loss_bbox: 0.4993, loss_cls: 0.3212, loss: 1.8832, grad_norm: 4.9799
+2023-02-01 11:20:26,556 - mmdet - INFO - Saving checkpoint at 2 epochs
+2023-02-01 11:23:23,745 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.6966  | 0.7924  | 0.3194  | 0.4357  |
+| cabinet        | 0.1899  | 0.5511  | 0.0477  | 0.1694  |
+| table          | 0.4371  | 0.6600  | 0.1471  | 0.3257  |
+| desk           | 0.5451  | 0.9370  | 0.2087  | 0.5748  |
+| garbagebin     | 0.2674  | 0.5283  | 0.0347  | 0.1642  |
+| window         | 0.1245  | 0.4504  | 0.0043  | 0.0780  |
+| sink           | 0.4571  | 0.6224  | 0.0508  | 0.1531  |
+| door           | 0.2008  | 0.6081  | 0.0185  | 0.1392  |
+| refrigerator   | 0.3482  | 0.5614  | 0.1686  | 0.3158  |
+| counter        | 0.1061  | 0.5000  | 0.0005  | 0.0385  |
+| sofa           | 0.5515  | 0.8247  | 0.2251  | 0.3505  |
+| bed            | 0.7894  | 0.8519  | 0.5606  | 0.6296  |
+| curtain        | 0.2277  | 0.6119  | 0.0204  | 0.0896  |
+| bookshelf      | 0.3946  | 0.7662  | 0.0664  | 0.2597  |
+| toilet         | 0.8667  | 0.9138  | 0.4994  | 0.5862  |
+| showercurtrain | 0.2704  | 0.5714  | 0.0000  | 0.0000  |
+| bathtub        | 0.5255  | 0.6452  | 0.1962  | 0.2258  |
+| picture        | 0.0056  | 0.0315  | 0.0002  | 0.0045  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.3891  | 0.6349  | 0.1427  | 0.2522  |
++----------------+---------+---------+---------+---------+
+2023-02-01 11:23:23,810 - mmdet - INFO - Epoch(val) [2][901]	chair_AP_0.25: 0.6966, cabinet_AP_0.25: 0.1899, table_AP_0.25: 0.4371, desk_AP_0.25: 0.5451, garbagebin_AP_0.25: 0.2674, window_AP_0.25: 0.1245, sink_AP_0.25: 0.4571, door_AP_0.25: 0.2008, refrigerator_AP_0.25: 0.3482, counter_AP_0.25: 0.1061, sofa_AP_0.25: 0.5515, bed_AP_0.25: 0.7894, curtain_AP_0.25: 0.2277, bookshelf_AP_0.25: 0.3946, toilet_AP_0.25: 0.8667, showercurtrain_AP_0.25: 0.2704, bathtub_AP_0.25: 0.5255, picture_AP_0.25: 0.0056, mAP_0.25: 0.3891, chair_rec_0.25: 0.7924, cabinet_rec_0.25: 0.5511, table_rec_0.25: 0.6600, desk_rec_0.25: 0.9370, garbagebin_rec_0.25: 0.5283, window_rec_0.25: 0.4504, sink_rec_0.25: 0.6224, door_rec_0.25: 0.6081, refrigerator_rec_0.25: 0.5614, counter_rec_0.25: 0.5000, sofa_rec_0.25: 0.8247, bed_rec_0.25: 0.8519, curtain_rec_0.25: 0.6119, bookshelf_rec_0.25: 0.7662, toilet_rec_0.25: 0.9138, showercurtrain_rec_0.25: 0.5714, bathtub_rec_0.25: 0.6452, picture_rec_0.25: 0.0315, mAR_0.25: 0.6349, chair_AP_0.50: 0.3194, cabinet_AP_0.50: 0.0477, table_AP_0.50: 0.1471, desk_AP_0.50: 0.2087, garbagebin_AP_0.50: 0.0347, window_AP_0.50: 0.0043, sink_AP_0.50: 0.0508, door_AP_0.50: 0.0185, refrigerator_AP_0.50: 0.1686, counter_AP_0.50: 0.0005, sofa_AP_0.50: 0.2251, bed_AP_0.50: 0.5606, curtain_AP_0.50: 0.0204, bookshelf_AP_0.50: 0.0664, toilet_AP_0.50: 0.4994, showercurtrain_AP_0.50: 0.0000, bathtub_AP_0.50: 0.1962, picture_AP_0.50: 0.0002, mAP_0.50: 0.1427, chair_rec_0.50: 0.4357, cabinet_rec_0.50: 0.1694, table_rec_0.50: 0.3257, desk_rec_0.50: 0.5748, garbagebin_rec_0.50: 0.1642, window_rec_0.50: 0.0780, sink_rec_0.50: 0.1531, door_rec_0.50: 0.1392, refrigerator_rec_0.50: 0.3158, counter_rec_0.50: 0.0385, sofa_rec_0.50: 0.3505, bed_rec_0.50: 0.6296, curtain_rec_0.50: 0.0896, bookshelf_rec_0.50: 0.2597, toilet_rec_0.50: 0.5862, showercurtrain_rec_0.50: 0.0000, bathtub_rec_0.50: 0.2258, picture_rec_0.50: 0.0045, mAR_0.50: 0.2522
+2023-02-01 11:24:56,258 - mmdet - INFO - Epoch [3][50/901]	lr: 1.000e-04, eta: 4:26:04, time: 1.838, data_time: 0.082, memory: 10776, loss_occ: 0.3959, acc_occ: 0.9059, loss_centerness: 0.6332, loss_bbox: 0.4862, loss_cls: 0.3257, loss: 1.8410, grad_norm: 4.6003
+2023-02-01 11:26:25,245 - mmdet - INFO - Epoch [3][100/901]	lr: 1.000e-04, eta: 4:24:35, time: 1.780, data_time: 0.021, memory: 10776, loss_occ: 0.4105, acc_occ: 0.9031, loss_centerness: 0.6376, loss_bbox: 0.4778, loss_cls: 0.3214, loss: 1.8473, grad_norm: 4.7731
+2023-02-01 11:27:54,111 - mmdet - INFO - Epoch [3][150/901]	lr: 1.000e-04, eta: 4:23:05, time: 1.777, data_time: 0.021, memory: 10776, loss_occ: 0.4103, acc_occ: 0.9068, loss_centerness: 0.6382, loss_bbox: 0.4803, loss_cls: 0.3087, loss: 1.8374, grad_norm: 5.0074
+2023-02-01 11:29:23,016 - mmdet - INFO - Epoch [3][200/901]	lr: 1.000e-04, eta: 4:21:35, time: 1.778, data_time: 0.021, memory: 10776, loss_occ: 0.4188, acc_occ: 0.9066, loss_centerness: 0.6331, loss_bbox: 0.4939, loss_cls: 0.3248, loss: 1.8705, grad_norm: 4.7973
+2023-02-01 11:30:51,927 - mmdet - INFO - Epoch [3][250/901]	lr: 1.000e-04, eta: 4:20:05, time: 1.778, data_time: 0.020, memory: 10776, loss_occ: 0.4149, acc_occ: 0.9058, loss_centerness: 0.6339, loss_bbox: 0.4930, loss_cls: 0.3153, loss: 1.8570, grad_norm: 5.0362
+2023-02-01 11:32:20,584 - mmdet - INFO - Epoch [3][300/901]	lr: 1.000e-04, eta: 4:18:34, time: 1.773, data_time: 0.020, memory: 10776, loss_occ: 0.4214, acc_occ: 0.9047, loss_centerness: 0.6342, loss_bbox: 0.4824, loss_cls: 0.3186, loss: 1.8566, grad_norm: 4.6425
+2023-02-01 11:33:49,567 - mmdet - INFO - Epoch [3][350/901]	lr: 1.000e-04, eta: 4:17:05, time: 1.780, data_time: 0.022, memory: 10776, loss_occ: 0.3965, acc_occ: 0.9070, loss_centerness: 0.6319, loss_bbox: 0.4778, loss_cls: 0.3097, loss: 1.8158, grad_norm: 4.8860
+2023-02-01 11:35:18,288 - mmdet - INFO - Epoch [3][400/901]	lr: 1.000e-04, eta: 4:15:34, time: 1.774, data_time: 0.022, memory: 10776, loss_occ: 0.3943, acc_occ: 0.9062, loss_centerness: 0.6367, loss_bbox: 0.4892, loss_cls: 0.3170, loss: 1.8372, grad_norm: 4.7878
+2023-02-01 11:36:47,182 - mmdet - INFO - Epoch [3][450/901]	lr: 1.000e-04, eta: 4:14:05, time: 1.778, data_time: 0.022, memory: 10776, loss_occ: 0.4077, acc_occ: 0.9082, loss_centerness: 0.6360, loss_bbox: 0.4767, loss_cls: 0.3050, loss: 1.8254, grad_norm: 4.9928
+2023-02-01 11:38:16,538 - mmdet - INFO - Epoch [3][500/901]	lr: 1.000e-04, eta: 4:12:37, time: 1.787, data_time: 0.022, memory: 10776, loss_occ: 0.4075, acc_occ: 0.9067, loss_centerness: 0.6391, loss_bbox: 0.4809, loss_cls: 0.3040, loss: 1.8315, grad_norm: 4.7634
+2023-02-01 11:39:45,729 - mmdet - INFO - Epoch [3][550/901]	lr: 1.000e-04, eta: 4:11:08, time: 1.784, data_time: 0.022, memory: 10776, loss_occ: 0.3978, acc_occ: 0.9077, loss_centerness: 0.6347, loss_bbox: 0.4769, loss_cls: 0.3038, loss: 1.8134, grad_norm: 4.6557
+2023-02-01 11:41:15,036 - mmdet - INFO - Epoch [3][600/901]	lr: 1.000e-04, eta: 4:09:40, time: 1.786, data_time: 0.022, memory: 10776, loss_occ: 0.4071, acc_occ: 0.9078, loss_centerness: 0.6323, loss_bbox: 0.4721, loss_cls: 0.2965, loss: 1.8080, grad_norm: 4.9803
+2023-02-01 11:42:44,406 - mmdet - INFO - Epoch [3][650/901]	lr: 1.000e-04, eta: 4:08:12, time: 1.787, data_time: 0.022, memory: 10776, loss_occ: 0.3992, acc_occ: 0.9133, loss_centerness: 0.6316, loss_bbox: 0.4787, loss_cls: 0.3014, loss: 1.8110, grad_norm: 4.8996
+2023-02-01 11:44:13,632 - mmdet - INFO - Epoch [3][700/901]	lr: 1.000e-04, eta: 4:06:43, time: 1.785, data_time: 0.022, memory: 10776, loss_occ: 0.4095, acc_occ: 0.9098, loss_centerness: 0.6313, loss_bbox: 0.4794, loss_cls: 0.3096, loss: 1.8299, grad_norm: 5.1393
+2023-02-01 11:45:42,747 - mmdet - INFO - Epoch [3][750/901]	lr: 1.000e-04, eta: 4:05:15, time: 1.782, data_time: 0.022, memory: 10776, loss_occ: 0.4040, acc_occ: 0.9089, loss_centerness: 0.6316, loss_bbox: 0.4713, loss_cls: 0.2999, loss: 1.8067, grad_norm: 4.5461
+2023-02-01 11:47:11,744 - mmdet - INFO - Epoch [3][800/901]	lr: 1.000e-04, eta: 4:03:45, time: 1.780, data_time: 0.024, memory: 10776, loss_occ: 0.4109, acc_occ: 0.9070, loss_centerness: 0.6338, loss_bbox: 0.4754, loss_cls: 0.3085, loss: 1.8286, grad_norm: 4.7868
+2023-02-01 11:48:41,102 - mmdet - INFO - Epoch [3][850/901]	lr: 1.000e-04, eta: 4:02:17, time: 1.787, data_time: 0.023, memory: 10776, loss_occ: 0.4061, acc_occ: 0.9132, loss_centerness: 0.6348, loss_bbox: 0.4576, loss_cls: 0.2864, loss: 1.7849, grad_norm: 4.6589
+2023-02-01 11:50:10,191 - mmdet - INFO - Epoch [3][900/901]	lr: 1.000e-04, eta: 4:00:48, time: 1.782, data_time: 0.022, memory: 10776, loss_occ: 0.4095, acc_occ: 0.9136, loss_centerness: 0.6300, loss_bbox: 0.4572, loss_cls: 0.2864, loss: 1.7831, grad_norm: 4.7174
+2023-02-01 11:50:12,093 - mmdet - INFO - Saving checkpoint at 3 epochs
+2023-02-01 11:53:03,684 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7051  | 0.7880  | 0.3745  | 0.5000  |
+| cabinet        | 0.2655  | 0.6371  | 0.0678  | 0.2124  |
+| window         | 0.1477  | 0.5071  | 0.0079  | 0.0887  |
+| table          | 0.4859  | 0.7486  | 0.2244  | 0.4171  |
+| garbagebin     | 0.2896  | 0.5113  | 0.0497  | 0.1698  |
+| desk           | 0.5553  | 0.8819  | 0.2569  | 0.5354  |
+| counter        | 0.2831  | 0.7500  | 0.0041  | 0.0962  |
+| door           | 0.2393  | 0.6103  | 0.0268  | 0.1756  |
+| sink           | 0.4939  | 0.6531  | 0.1288  | 0.2347  |
+| sofa           | 0.6625  | 0.8866  | 0.2797  | 0.4639  |
+| refrigerator   | 0.3401  | 0.5088  | 0.1022  | 0.1930  |
+| bed            | 0.8117  | 0.9012  | 0.5907  | 0.6667  |
+| bookshelf      | 0.2380  | 0.7013  | 0.0129  | 0.1299  |
+| curtain        | 0.2030  | 0.4776  | 0.0004  | 0.0149  |
+| toilet         | 0.8855  | 0.9310  | 0.6075  | 0.6379  |
+| showercurtrain | 0.3431  | 0.7143  | 0.0003  | 0.0357  |
+| bathtub        | 0.4965  | 0.7419  | 0.2263  | 0.3871  |
+| picture        | 0.0182  | 0.0901  | 0.0005  | 0.0090  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.4147  | 0.6689  | 0.1645  | 0.2760  |
++----------------+---------+---------+---------+---------+
+2023-02-01 11:53:03,748 - mmdet - INFO - Epoch(val) [3][901]	chair_AP_0.25: 0.7051, cabinet_AP_0.25: 0.2655, window_AP_0.25: 0.1477, table_AP_0.25: 0.4859, garbagebin_AP_0.25: 0.2896, desk_AP_0.25: 0.5553, counter_AP_0.25: 0.2831, door_AP_0.25: 0.2393, sink_AP_0.25: 0.4939, sofa_AP_0.25: 0.6625, refrigerator_AP_0.25: 0.3401, bed_AP_0.25: 0.8117, bookshelf_AP_0.25: 0.2380, curtain_AP_0.25: 0.2030, toilet_AP_0.25: 0.8855, showercurtrain_AP_0.25: 0.3431, bathtub_AP_0.25: 0.4965, picture_AP_0.25: 0.0182, mAP_0.25: 0.4147, chair_rec_0.25: 0.7880, cabinet_rec_0.25: 0.6371, window_rec_0.25: 0.5071, table_rec_0.25: 0.7486, garbagebin_rec_0.25: 0.5113, desk_rec_0.25: 0.8819, counter_rec_0.25: 0.7500, door_rec_0.25: 0.6103, sink_rec_0.25: 0.6531, sofa_rec_0.25: 0.8866, refrigerator_rec_0.25: 0.5088, bed_rec_0.25: 0.9012, bookshelf_rec_0.25: 0.7013, curtain_rec_0.25: 0.4776, toilet_rec_0.25: 0.9310, showercurtrain_rec_0.25: 0.7143, bathtub_rec_0.25: 0.7419, picture_rec_0.25: 0.0901, mAR_0.25: 0.6689, chair_AP_0.50: 0.3745, cabinet_AP_0.50: 0.0678, window_AP_0.50: 0.0079, table_AP_0.50: 0.2244, garbagebin_AP_0.50: 0.0497, desk_AP_0.50: 0.2569, counter_AP_0.50: 0.0041, door_AP_0.50: 0.0268, sink_AP_0.50: 0.1288, sofa_AP_0.50: 0.2797, refrigerator_AP_0.50: 0.1022, bed_AP_0.50: 0.5907, bookshelf_AP_0.50: 0.0129, curtain_AP_0.50: 0.0004, toilet_AP_0.50: 0.6075, showercurtrain_AP_0.50: 0.0003, bathtub_AP_0.50: 0.2263, picture_AP_0.50: 0.0005, mAP_0.50: 0.1645, chair_rec_0.50: 0.5000, cabinet_rec_0.50: 0.2124, window_rec_0.50: 0.0887, table_rec_0.50: 0.4171, garbagebin_rec_0.50: 0.1698, desk_rec_0.50: 0.5354, counter_rec_0.50: 0.0962, door_rec_0.50: 0.1756, sink_rec_0.50: 0.2347, sofa_rec_0.50: 0.4639, refrigerator_rec_0.50: 0.1930, bed_rec_0.50: 0.6667, bookshelf_rec_0.50: 0.1299, curtain_rec_0.50: 0.0149, toilet_rec_0.50: 0.6379, showercurtrain_rec_0.50: 0.0357, bathtub_rec_0.50: 0.3871, picture_rec_0.50: 0.0090, mAR_0.50: 0.2760
+2023-02-01 11:54:35,839 - mmdet - INFO - Epoch [4][50/901]	lr: 1.000e-04, eta: 3:59:19, time: 1.832, data_time: 0.079, memory: 10776, loss_occ: 0.3930, acc_occ: 0.9133, loss_centerness: 0.6305, loss_bbox: 0.4454, loss_cls: 0.2753, loss: 1.7442, grad_norm: 4.8421
+2023-02-01 11:56:04,202 - mmdet - INFO - Epoch [4][100/901]	lr: 1.000e-04, eta: 3:57:48, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.4008, acc_occ: 0.9125, loss_centerness: 0.6290, loss_bbox: 0.4632, loss_cls: 0.2848, loss: 1.7778, grad_norm: 4.8756
+2023-02-01 11:57:32,500 - mmdet - INFO - Epoch [4][150/901]	lr: 1.000e-04, eta: 3:56:17, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.4054, acc_occ: 0.9133, loss_centerness: 0.6332, loss_bbox: 0.4516, loss_cls: 0.2864, loss: 1.7766, grad_norm: 4.7549
+2023-02-01 11:59:00,718 - mmdet - INFO - Epoch [4][200/901]	lr: 1.000e-04, eta: 3:54:45, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.4096, acc_occ: 0.9105, loss_centerness: 0.6323, loss_bbox: 0.4596, loss_cls: 0.2773, loss: 1.7788, grad_norm: 4.8229
+2023-02-01 12:00:29,167 - mmdet - INFO - Epoch [4][250/901]	lr: 1.000e-04, eta: 3:53:15, time: 1.769, data_time: 0.019, memory: 10776, loss_occ: 0.4073, acc_occ: 0.9121, loss_centerness: 0.6300, loss_bbox: 0.4499, loss_cls: 0.2802, loss: 1.7674, grad_norm: 4.5085
+2023-02-01 12:01:57,381 - mmdet - INFO - Epoch [4][300/901]	lr: 1.000e-04, eta: 3:51:44, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.4082, acc_occ: 0.9142, loss_centerness: 0.6308, loss_bbox: 0.4570, loss_cls: 0.2863, loss: 1.7822, grad_norm: 4.6328
+2023-02-01 12:03:25,661 - mmdet - INFO - Epoch [4][350/901]	lr: 1.000e-04, eta: 3:50:13, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.4048, acc_occ: 0.9138, loss_centerness: 0.6316, loss_bbox: 0.4494, loss_cls: 0.2765, loss: 1.7623, grad_norm: 4.8667
+2023-02-01 12:04:53,829 - mmdet - INFO - Epoch [4][400/901]	lr: 1.000e-04, eta: 3:48:42, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.4149, acc_occ: 0.9144, loss_centerness: 0.6301, loss_bbox: 0.4427, loss_cls: 0.2729, loss: 1.7607, grad_norm: 4.6595
+2023-02-01 12:06:22,309 - mmdet - INFO - Epoch [4][450/901]	lr: 1.000e-04, eta: 3:47:11, time: 1.770, data_time: 0.020, memory: 10776, loss_occ: 0.4062, acc_occ: 0.9144, loss_centerness: 0.6301, loss_bbox: 0.4497, loss_cls: 0.2898, loss: 1.7759, grad_norm: 4.8553
+2023-02-01 12:07:50,333 - mmdet - INFO - Epoch [4][500/901]	lr: 1.000e-04, eta: 3:45:40, time: 1.760, data_time: 0.020, memory: 10776, loss_occ: 0.3940, acc_occ: 0.9163, loss_centerness: 0.6282, loss_bbox: 0.4486, loss_cls: 0.2759, loss: 1.7467, grad_norm: 4.6116
+2023-02-01 12:09:18,477 - mmdet - INFO - Epoch [4][550/901]	lr: 1.000e-04, eta: 3:44:09, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3762, acc_occ: 0.9191, loss_centerness: 0.6303, loss_bbox: 0.4547, loss_cls: 0.2685, loss: 1.7297, grad_norm: 4.6338
+2023-02-01 12:10:46,838 - mmdet - INFO - Epoch [4][600/901]	lr: 1.000e-04, eta: 3:42:39, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3937, acc_occ: 0.9127, loss_centerness: 0.6315, loss_bbox: 0.4484, loss_cls: 0.2822, loss: 1.7558, grad_norm: 4.4904
+2023-02-01 12:12:15,225 - mmdet - INFO - Epoch [4][650/901]	lr: 1.000e-04, eta: 3:41:09, time: 1.768, data_time: 0.020, memory: 10776, loss_occ: 0.3789, acc_occ: 0.9141, loss_centerness: 0.6350, loss_bbox: 0.4499, loss_cls: 0.2764, loss: 1.7402, grad_norm: 4.6935
+2023-02-01 12:13:43,449 - mmdet - INFO - Epoch [4][700/901]	lr: 1.000e-04, eta: 3:39:38, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3960, acc_occ: 0.9161, loss_centerness: 0.6310, loss_bbox: 0.4381, loss_cls: 0.2626, loss: 1.7277, grad_norm: 4.7522
+2023-02-01 12:15:11,816 - mmdet - INFO - Epoch [4][750/901]	lr: 1.000e-04, eta: 3:38:08, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.3872, acc_occ: 0.9156, loss_centerness: 0.6332, loss_bbox: 0.4384, loss_cls: 0.2668, loss: 1.7256, grad_norm: 4.7637
+2023-02-01 12:16:40,257 - mmdet - INFO - Epoch [4][800/901]	lr: 1.000e-04, eta: 3:36:38, time: 1.769, data_time: 0.019, memory: 10776, loss_occ: 0.4001, acc_occ: 0.9108, loss_centerness: 0.6314, loss_bbox: 0.4458, loss_cls: 0.2768, loss: 1.7542, grad_norm: 4.8109
+2023-02-01 12:18:08,419 - mmdet - INFO - Epoch [4][850/901]	lr: 1.000e-04, eta: 3:35:07, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.4029, acc_occ: 0.9135, loss_centerness: 0.6313, loss_bbox: 0.4417, loss_cls: 0.2744, loss: 1.7502, grad_norm: 4.9223
+2023-02-01 12:19:36,698 - mmdet - INFO - Epoch [4][900/901]	lr: 1.000e-04, eta: 3:33:37, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3911, acc_occ: 0.9166, loss_centerness: 0.6295, loss_bbox: 0.4364, loss_cls: 0.2675, loss: 1.7246, grad_norm: 4.6866
+2023-02-01 12:19:38,548 - mmdet - INFO - Saving checkpoint at 4 epochs
+2023-02-01 12:22:19,987 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7381  | 0.8202  | 0.3903  | 0.5051  |
+| table          | 0.5181  | 0.7257  | 0.2903  | 0.4371  |
+| window         | 0.1501  | 0.4468  | 0.0027  | 0.0603  |
+| garbagebin     | 0.2584  | 0.5453  | 0.0678  | 0.2151  |
+| door           | 0.3007  | 0.6231  | 0.0385  | 0.1777  |
+| cabinet        | 0.2884  | 0.5968  | 0.1038  | 0.2446  |
+| desk           | 0.6062  | 0.9291  | 0.3056  | 0.5906  |
+| sofa           | 0.6731  | 0.8763  | 0.3401  | 0.4948  |
+| bookshelf      | 0.3622  | 0.8961  | 0.0706  | 0.4286  |
+| counter        | 0.2912  | 0.5769  | 0.0309  | 0.0769  |
+| refrigerator   | 0.3521  | 0.7018  | 0.1950  | 0.3684  |
+| sink           | 0.4530  | 0.5714  | 0.0698  | 0.1633  |
+| curtain        | 0.2319  | 0.5224  | 0.0075  | 0.1045  |
+| bed            | 0.8224  | 0.8642  | 0.6682  | 0.7160  |
+| toilet         | 0.9138  | 0.9310  | 0.4560  | 0.5172  |
+| showercurtrain | 0.2242  | 0.5714  | 0.0077  | 0.1071  |
+| bathtub        | 0.6364  | 0.7419  | 0.3931  | 0.4516  |
+| picture        | 0.0190  | 0.0811  | 0.0023  | 0.0225  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.4355  | 0.6679  | 0.1911  | 0.3156  |
++----------------+---------+---------+---------+---------+
+2023-02-01 12:22:20,063 - mmdet - INFO - Epoch(val) [4][901]	chair_AP_0.25: 0.7381, table_AP_0.25: 0.5181, window_AP_0.25: 0.1501, garbagebin_AP_0.25: 0.2584, door_AP_0.25: 0.3007, cabinet_AP_0.25: 0.2884, desk_AP_0.25: 0.6062, sofa_AP_0.25: 0.6731, bookshelf_AP_0.25: 0.3622, counter_AP_0.25: 0.2912, refrigerator_AP_0.25: 0.3521, sink_AP_0.25: 0.4530, curtain_AP_0.25: 0.2319, bed_AP_0.25: 0.8224, toilet_AP_0.25: 0.9138, showercurtrain_AP_0.25: 0.2242, bathtub_AP_0.25: 0.6364, picture_AP_0.25: 0.0190, mAP_0.25: 0.4355, chair_rec_0.25: 0.8202, table_rec_0.25: 0.7257, window_rec_0.25: 0.4468, garbagebin_rec_0.25: 0.5453, door_rec_0.25: 0.6231, cabinet_rec_0.25: 0.5968, desk_rec_0.25: 0.9291, sofa_rec_0.25: 0.8763, bookshelf_rec_0.25: 0.8961, counter_rec_0.25: 0.5769, refrigerator_rec_0.25: 0.7018, sink_rec_0.25: 0.5714, curtain_rec_0.25: 0.5224, bed_rec_0.25: 0.8642, toilet_rec_0.25: 0.9310, showercurtrain_rec_0.25: 0.5714, bathtub_rec_0.25: 0.7419, picture_rec_0.25: 0.0811, mAR_0.25: 0.6679, chair_AP_0.50: 0.3903, table_AP_0.50: 0.2903, window_AP_0.50: 0.0027, garbagebin_AP_0.50: 0.0678, door_AP_0.50: 0.0385, cabinet_AP_0.50: 0.1038, desk_AP_0.50: 0.3056, sofa_AP_0.50: 0.3401, bookshelf_AP_0.50: 0.0706, counter_AP_0.50: 0.0309, refrigerator_AP_0.50: 0.1950, sink_AP_0.50: 0.0698, curtain_AP_0.50: 0.0075, bed_AP_0.50: 0.6682, toilet_AP_0.50: 0.4560, showercurtrain_AP_0.50: 0.0077, bathtub_AP_0.50: 0.3931, picture_AP_0.50: 0.0023, mAP_0.50: 0.1911, chair_rec_0.50: 0.5051, table_rec_0.50: 0.4371, window_rec_0.50: 0.0603, garbagebin_rec_0.50: 0.2151, door_rec_0.50: 0.1777, cabinet_rec_0.50: 0.2446, desk_rec_0.50: 0.5906, sofa_rec_0.50: 0.4948, bookshelf_rec_0.50: 0.4286, counter_rec_0.50: 0.0769, refrigerator_rec_0.50: 0.3684, sink_rec_0.50: 0.1633, curtain_rec_0.50: 0.1045, bed_rec_0.50: 0.7160, toilet_rec_0.50: 0.5172, showercurtrain_rec_0.50: 0.1071, bathtub_rec_0.50: 0.4516, picture_rec_0.50: 0.0225, mAR_0.50: 0.3156
+2023-02-01 12:23:51,858 - mmdet - INFO - Epoch [5][50/901]	lr: 1.000e-04, eta: 3:32:08, time: 1.825, data_time: 0.079, memory: 10776, loss_occ: 0.3929, acc_occ: 0.9175, loss_centerness: 0.6291, loss_bbox: 0.4313, loss_cls: 0.2608, loss: 1.7141, grad_norm: 4.6322
+2023-02-01 12:25:20,126 - mmdet - INFO - Epoch [5][100/901]	lr: 1.000e-04, eta: 3:30:38, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3975, acc_occ: 0.9137, loss_centerness: 0.6312, loss_bbox: 0.4354, loss_cls: 0.2642, loss: 1.7283, grad_norm: 4.7171
+2023-02-01 12:26:48,531 - mmdet - INFO - Epoch [5][150/901]	lr: 1.000e-04, eta: 3:29:08, time: 1.768, data_time: 0.020, memory: 10776, loss_occ: 0.4021, acc_occ: 0.9175, loss_centerness: 0.6295, loss_bbox: 0.4221, loss_cls: 0.2550, loss: 1.7087, grad_norm: 5.0234
+2023-02-01 12:28:16,885 - mmdet - INFO - Epoch [5][200/901]	lr: 1.000e-04, eta: 3:27:38, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3920, acc_occ: 0.9180, loss_centerness: 0.6266, loss_bbox: 0.4308, loss_cls: 0.2605, loss: 1.7098, grad_norm: 4.7924
+2023-02-01 12:29:45,189 - mmdet - INFO - Epoch [5][250/901]	lr: 1.000e-04, eta: 3:26:08, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3886, acc_occ: 0.9175, loss_centerness: 0.6306, loss_bbox: 0.4274, loss_cls: 0.2511, loss: 1.6976, grad_norm: 4.4343
+2023-02-01 12:31:13,476 - mmdet - INFO - Epoch [5][300/901]	lr: 1.000e-04, eta: 3:24:38, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.4072, acc_occ: 0.9145, loss_centerness: 0.6262, loss_bbox: 0.4184, loss_cls: 0.2535, loss: 1.7053, grad_norm: 4.6677
+2023-02-01 12:32:41,696 - mmdet - INFO - Epoch [5][350/901]	lr: 1.000e-04, eta: 3:23:08, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3817, acc_occ: 0.9239, loss_centerness: 0.6296, loss_bbox: 0.4224, loss_cls: 0.2574, loss: 1.6910, grad_norm: 4.5801
+2023-02-01 12:34:09,931 - mmdet - INFO - Epoch [5][400/901]	lr: 1.000e-04, eta: 3:21:38, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3924, acc_occ: 0.9180, loss_centerness: 0.6305, loss_bbox: 0.4204, loss_cls: 0.2469, loss: 1.6902, grad_norm: 4.9398
+2023-02-01 12:35:38,241 - mmdet - INFO - Epoch [5][450/901]	lr: 1.000e-04, eta: 3:20:08, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3802, acc_occ: 0.9173, loss_centerness: 0.6317, loss_bbox: 0.4257, loss_cls: 0.2594, loss: 1.6970, grad_norm: 4.9752
+2023-02-01 12:37:06,431 - mmdet - INFO - Epoch [5][500/901]	lr: 1.000e-04, eta: 3:18:38, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3760, acc_occ: 0.9173, loss_centerness: 0.6319, loss_bbox: 0.4310, loss_cls: 0.2593, loss: 1.6982, grad_norm: 4.7508
+2023-02-01 12:38:34,648 - mmdet - INFO - Epoch [5][550/901]	lr: 1.000e-04, eta: 3:17:09, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3916, acc_occ: 0.9156, loss_centerness: 0.6257, loss_bbox: 0.4253, loss_cls: 0.2496, loss: 1.6923, grad_norm: 4.5110
+2023-02-01 12:40:02,845 - mmdet - INFO - Epoch [5][600/901]	lr: 1.000e-04, eta: 3:15:39, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.4124, acc_occ: 0.9165, loss_centerness: 0.6270, loss_bbox: 0.4331, loss_cls: 0.2622, loss: 1.7347, grad_norm: 4.6728
+2023-02-01 12:41:31,158 - mmdet - INFO - Epoch [5][650/901]	lr: 1.000e-04, eta: 3:14:09, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3962, acc_occ: 0.9163, loss_centerness: 0.6298, loss_bbox: 0.4349, loss_cls: 0.2576, loss: 1.7185, grad_norm: 4.3270
+2023-02-01 12:42:59,320 - mmdet - INFO - Epoch [5][700/901]	lr: 1.000e-04, eta: 3:12:39, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3912, acc_occ: 0.9231, loss_centerness: 0.6271, loss_bbox: 0.4166, loss_cls: 0.2459, loss: 1.6808, grad_norm: 4.5950
+2023-02-01 12:44:27,480 - mmdet - INFO - Epoch [5][750/901]	lr: 1.000e-04, eta: 3:11:09, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.4020, acc_occ: 0.9170, loss_centerness: 0.6270, loss_bbox: 0.4273, loss_cls: 0.2517, loss: 1.7081, grad_norm: 4.5677
+2023-02-01 12:45:55,753 - mmdet - INFO - Epoch [5][800/901]	lr: 1.000e-04, eta: 3:09:40, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3906, acc_occ: 0.9199, loss_centerness: 0.6270, loss_bbox: 0.4284, loss_cls: 0.2538, loss: 1.6998, grad_norm: 4.6144
+2023-02-01 12:47:23,964 - mmdet - INFO - Epoch [5][850/901]	lr: 1.000e-04, eta: 3:08:10, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3770, acc_occ: 0.9181, loss_centerness: 0.6322, loss_bbox: 0.4258, loss_cls: 0.2436, loss: 1.6786, grad_norm: 4.7942
+2023-02-01 12:48:52,180 - mmdet - INFO - Epoch [5][900/901]	lr: 1.000e-04, eta: 3:06:41, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3969, acc_occ: 0.9195, loss_centerness: 0.6271, loss_bbox: 0.4187, loss_cls: 0.2503, loss: 1.6930, grad_norm: 4.6537
+2023-02-01 12:48:54,053 - mmdet - INFO - Saving checkpoint at 5 epochs
+2023-02-01 12:51:37,681 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7481  | 0.8187  | 0.4417  | 0.5439  |
+| cabinet        | 0.3097  | 0.6317  | 0.1093  | 0.2688  |
+| window         | 0.2157  | 0.5603  | 0.0165  | 0.1241  |
+| table          | 0.5093  | 0.7029  | 0.2931  | 0.4314  |
+| garbagebin     | 0.2900  | 0.6113  | 0.0928  | 0.2358  |
+| door           | 0.3230  | 0.6124  | 0.0337  | 0.1692  |
+| counter        | 0.4102  | 0.8077  | 0.0250  | 0.1731  |
+| sofa           | 0.6741  | 0.8763  | 0.3873  | 0.5567  |
+| desk           | 0.7040  | 0.9370  | 0.4043  | 0.5827  |
+| refrigerator   | 0.4241  | 0.6842  | 0.1062  | 0.3509  |
+| sink           | 0.5070  | 0.6429  | 0.1640  | 0.2959  |
+| curtain        | 0.2630  | 0.6119  | 0.0088  | 0.0896  |
+| bed            | 0.8509  | 0.8889  | 0.6950  | 0.7531  |
+| bookshelf      | 0.5194  | 0.8831  | 0.1911  | 0.3896  |
+| picture        | 0.0240  | 0.0856  | 0.0008  | 0.0180  |
+| toilet         | 0.9100  | 0.9138  | 0.7106  | 0.7241  |
+| bathtub        | 0.6866  | 0.8065  | 0.4139  | 0.4839  |
+| showercurtrain | 0.3940  | 0.6786  | 0.0214  | 0.1786  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.4868  | 0.7085  | 0.2286  | 0.3539  |
++----------------+---------+---------+---------+---------+
+2023-02-01 12:51:37,732 - mmdet - INFO - Epoch(val) [5][901]	chair_AP_0.25: 0.7481, cabinet_AP_0.25: 0.3097, window_AP_0.25: 0.2157, table_AP_0.25: 0.5093, garbagebin_AP_0.25: 0.2900, door_AP_0.25: 0.3230, counter_AP_0.25: 0.4102, sofa_AP_0.25: 0.6741, desk_AP_0.25: 0.7040, refrigerator_AP_0.25: 0.4241, sink_AP_0.25: 0.5070, curtain_AP_0.25: 0.2630, bed_AP_0.25: 0.8509, bookshelf_AP_0.25: 0.5194, picture_AP_0.25: 0.0240, toilet_AP_0.25: 0.9100, bathtub_AP_0.25: 0.6866, showercurtrain_AP_0.25: 0.3940, mAP_0.25: 0.4868, chair_rec_0.25: 0.8187, cabinet_rec_0.25: 0.6317, window_rec_0.25: 0.5603, table_rec_0.25: 0.7029, garbagebin_rec_0.25: 0.6113, door_rec_0.25: 0.6124, counter_rec_0.25: 0.8077, sofa_rec_0.25: 0.8763, desk_rec_0.25: 0.9370, refrigerator_rec_0.25: 0.6842, sink_rec_0.25: 0.6429, curtain_rec_0.25: 0.6119, bed_rec_0.25: 0.8889, bookshelf_rec_0.25: 0.8831, picture_rec_0.25: 0.0856, toilet_rec_0.25: 0.9138, bathtub_rec_0.25: 0.8065, showercurtrain_rec_0.25: 0.6786, mAR_0.25: 0.7085, chair_AP_0.50: 0.4417, cabinet_AP_0.50: 0.1093, window_AP_0.50: 0.0165, table_AP_0.50: 0.2931, garbagebin_AP_0.50: 0.0928, door_AP_0.50: 0.0337, counter_AP_0.50: 0.0250, sofa_AP_0.50: 0.3873, desk_AP_0.50: 0.4043, refrigerator_AP_0.50: 0.1062, sink_AP_0.50: 0.1640, curtain_AP_0.50: 0.0088, bed_AP_0.50: 0.6950, bookshelf_AP_0.50: 0.1911, picture_AP_0.50: 0.0008, toilet_AP_0.50: 0.7106, bathtub_AP_0.50: 0.4139, showercurtrain_AP_0.50: 0.0214, mAP_0.50: 0.2286, chair_rec_0.50: 0.5439, cabinet_rec_0.50: 0.2688, window_rec_0.50: 0.1241, table_rec_0.50: 0.4314, garbagebin_rec_0.50: 0.2358, door_rec_0.50: 0.1692, counter_rec_0.50: 0.1731, sofa_rec_0.50: 0.5567, desk_rec_0.50: 0.5827, refrigerator_rec_0.50: 0.3509, sink_rec_0.50: 0.2959, curtain_rec_0.50: 0.0896, bed_rec_0.50: 0.7531, bookshelf_rec_0.50: 0.3896, picture_rec_0.50: 0.0180, toilet_rec_0.50: 0.7241, bathtub_rec_0.50: 0.4839, showercurtrain_rec_0.50: 0.1786, mAR_0.50: 0.3539
+2023-02-01 12:53:09,511 - mmdet - INFO - Epoch [6][50/901]	lr: 1.000e-04, eta: 3:05:11, time: 1.826, data_time: 0.079, memory: 10776, loss_occ: 0.3771, acc_occ: 0.9205, loss_centerness: 0.6289, loss_bbox: 0.4123, loss_cls: 0.2406, loss: 1.6589, grad_norm: 4.5967
+2023-02-01 12:54:37,545 - mmdet - INFO - Epoch [6][100/901]	lr: 1.000e-04, eta: 3:03:41, time: 1.761, data_time: 0.019, memory: 10776, loss_occ: 0.3821, acc_occ: 0.9227, loss_centerness: 0.6248, loss_bbox: 0.4135, loss_cls: 0.2423, loss: 1.6628, grad_norm: 4.4532
+2023-02-01 12:56:05,854 - mmdet - INFO - Epoch [6][150/901]	lr: 1.000e-04, eta: 3:02:12, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.4017, acc_occ: 0.9192, loss_centerness: 0.6296, loss_bbox: 0.4104, loss_cls: 0.2410, loss: 1.6827, grad_norm: 4.7500
+2023-02-01 12:57:34,036 - mmdet - INFO - Epoch [6][200/901]	lr: 1.000e-04, eta: 3:00:42, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.4060, acc_occ: 0.9177, loss_centerness: 0.6303, loss_bbox: 0.4144, loss_cls: 0.2441, loss: 1.6948, grad_norm: 4.6887
+2023-02-01 12:59:02,392 - mmdet - INFO - Epoch [6][250/901]	lr: 1.000e-04, eta: 2:59:13, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3804, acc_occ: 0.9186, loss_centerness: 0.6295, loss_bbox: 0.4122, loss_cls: 0.2336, loss: 1.6557, grad_norm: 4.6722
+2023-02-01 13:00:30,893 - mmdet - INFO - Epoch [6][300/901]	lr: 1.000e-04, eta: 2:57:44, time: 1.770, data_time: 0.019, memory: 10776, loss_occ: 0.3971, acc_occ: 0.9192, loss_centerness: 0.6273, loss_bbox: 0.4024, loss_cls: 0.2401, loss: 1.6670, grad_norm: 4.6917
+2023-02-01 13:01:59,293 - mmdet - INFO - Epoch [6][350/901]	lr: 1.000e-04, eta: 2:56:15, time: 1.768, data_time: 0.020, memory: 10776, loss_occ: 0.3904, acc_occ: 0.9174, loss_centerness: 0.6263, loss_bbox: 0.4163, loss_cls: 0.2509, loss: 1.6839, grad_norm: 4.9641
+2023-02-01 13:03:27,727 - mmdet - INFO - Epoch [6][400/901]	lr: 1.000e-04, eta: 2:54:46, time: 1.769, data_time: 0.020, memory: 10776, loss_occ: 0.3982, acc_occ: 0.9224, loss_centerness: 0.6303, loss_bbox: 0.4108, loss_cls: 0.2401, loss: 1.6794, grad_norm: 4.8270
+2023-02-01 13:04:55,955 - mmdet - INFO - Epoch [6][450/901]	lr: 1.000e-04, eta: 2:53:16, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.4016, acc_occ: 0.9196, loss_centerness: 0.6274, loss_bbox: 0.4085, loss_cls: 0.2320, loss: 1.6694, grad_norm: 4.7098
+2023-02-01 13:06:24,139 - mmdet - INFO - Epoch [6][500/901]	lr: 1.000e-04, eta: 2:51:47, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3887, acc_occ: 0.9243, loss_centerness: 0.6271, loss_bbox: 0.3994, loss_cls: 0.2249, loss: 1.6401, grad_norm: 4.9099
+2023-02-01 13:07:52,285 - mmdet - INFO - Epoch [6][550/901]	lr: 1.000e-04, eta: 2:50:17, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.3790, acc_occ: 0.9208, loss_centerness: 0.6257, loss_bbox: 0.4118, loss_cls: 0.2397, loss: 1.6561, grad_norm: 4.4168
+2023-02-01 13:09:20,641 - mmdet - INFO - Epoch [6][600/901]	lr: 1.000e-04, eta: 2:48:48, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.3778, acc_occ: 0.9235, loss_centerness: 0.6256, loss_bbox: 0.4040, loss_cls: 0.2381, loss: 1.6454, grad_norm: 4.7270
+2023-02-01 13:10:48,719 - mmdet - INFO - Epoch [6][650/901]	lr: 1.000e-04, eta: 2:47:19, time: 1.762, data_time: 0.019, memory: 10776, loss_occ: 0.3895, acc_occ: 0.9216, loss_centerness: 0.6279, loss_bbox: 0.3995, loss_cls: 0.2230, loss: 1.6399, grad_norm: 4.8539
+2023-02-01 13:12:17,032 - mmdet - INFO - Epoch [6][700/901]	lr: 1.000e-04, eta: 2:45:49, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3634, acc_occ: 0.9228, loss_centerness: 0.6262, loss_bbox: 0.4040, loss_cls: 0.2389, loss: 1.6324, grad_norm: 4.6876
+2023-02-01 13:13:45,391 - mmdet - INFO - Epoch [6][750/901]	lr: 1.000e-04, eta: 2:44:20, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.4042, acc_occ: 0.9221, loss_centerness: 0.6234, loss_bbox: 0.4005, loss_cls: 0.2277, loss: 1.6558, grad_norm: 4.9557
+2023-02-01 13:15:13,720 - mmdet - INFO - Epoch [6][800/901]	lr: 1.000e-04, eta: 2:42:51, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3704, acc_occ: 0.9203, loss_centerness: 0.6258, loss_bbox: 0.4078, loss_cls: 0.2349, loss: 1.6388, grad_norm: 4.6872
+2023-02-01 13:16:42,021 - mmdet - INFO - Epoch [6][850/901]	lr: 1.000e-04, eta: 2:41:22, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3914, acc_occ: 0.9253, loss_centerness: 0.6231, loss_bbox: 0.4011, loss_cls: 0.2224, loss: 1.6379, grad_norm: 4.8223
+2023-02-01 13:18:10,329 - mmdet - INFO - Epoch [6][900/901]	lr: 1.000e-04, eta: 2:39:53, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3921, acc_occ: 0.9183, loss_centerness: 0.6269, loss_bbox: 0.4053, loss_cls: 0.2451, loss: 1.6694, grad_norm: 4.5734
+2023-02-01 13:18:12,184 - mmdet - INFO - Saving checkpoint at 6 epochs
+2023-02-01 13:20:55,690 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7474  | 0.8209  | 0.4144  | 0.5336  |
+| window         | 0.1894  | 0.5213  | 0.0176  | 0.1135  |
+| cabinet        | 0.3130  | 0.6344  | 0.1176  | 0.2742  |
+| table          | 0.5453  | 0.7286  | 0.3345  | 0.4800  |
+| desk           | 0.6845  | 0.9370  | 0.4445  | 0.6378  |
+| garbagebin     | 0.2982  | 0.5585  | 0.1189  | 0.2566  |
+| sofa           | 0.7208  | 0.9175  | 0.3122  | 0.5052  |
+| counter        | 0.3533  | 0.8077  | 0.0125  | 0.1923  |
+| door           | 0.3269  | 0.6338  | 0.0365  | 0.1692  |
+| bookshelf      | 0.5434  | 0.8701  | 0.2107  | 0.4675  |
+| refrigerator   | 0.4722  | 0.6491  | 0.1376  | 0.3158  |
+| sink           | 0.4587  | 0.5510  | 0.1697  | 0.2449  |
+| curtain        | 0.3023  | 0.5970  | 0.0166  | 0.1343  |
+| bed            | 0.8391  | 0.8765  | 0.6683  | 0.7284  |
+| picture        | 0.0213  | 0.0856  | 0.0011  | 0.0090  |
+| toilet         | 0.8748  | 0.8793  | 0.5063  | 0.5690  |
+| bathtub        | 0.7724  | 0.8065  | 0.6052  | 0.6452  |
+| showercurtrain | 0.3669  | 0.6429  | 0.0013  | 0.0714  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.4906  | 0.6954  | 0.2292  | 0.3527  |
++----------------+---------+---------+---------+---------+
+2023-02-01 13:20:55,740 - mmdet - INFO - Epoch(val) [6][901]	chair_AP_0.25: 0.7474, window_AP_0.25: 0.1894, cabinet_AP_0.25: 0.3130, table_AP_0.25: 0.5453, desk_AP_0.25: 0.6845, garbagebin_AP_0.25: 0.2982, sofa_AP_0.25: 0.7208, counter_AP_0.25: 0.3533, door_AP_0.25: 0.3269, bookshelf_AP_0.25: 0.5434, refrigerator_AP_0.25: 0.4722, sink_AP_0.25: 0.4587, curtain_AP_0.25: 0.3023, bed_AP_0.25: 0.8391, picture_AP_0.25: 0.0213, toilet_AP_0.25: 0.8748, bathtub_AP_0.25: 0.7724, showercurtrain_AP_0.25: 0.3669, mAP_0.25: 0.4906, chair_rec_0.25: 0.8209, window_rec_0.25: 0.5213, cabinet_rec_0.25: 0.6344, table_rec_0.25: 0.7286, desk_rec_0.25: 0.9370, garbagebin_rec_0.25: 0.5585, sofa_rec_0.25: 0.9175, counter_rec_0.25: 0.8077, door_rec_0.25: 0.6338, bookshelf_rec_0.25: 0.8701, refrigerator_rec_0.25: 0.6491, sink_rec_0.25: 0.5510, curtain_rec_0.25: 0.5970, bed_rec_0.25: 0.8765, picture_rec_0.25: 0.0856, toilet_rec_0.25: 0.8793, bathtub_rec_0.25: 0.8065, showercurtrain_rec_0.25: 0.6429, mAR_0.25: 0.6954, chair_AP_0.50: 0.4144, window_AP_0.50: 0.0176, cabinet_AP_0.50: 0.1176, table_AP_0.50: 0.3345, desk_AP_0.50: 0.4445, garbagebin_AP_0.50: 0.1189, sofa_AP_0.50: 0.3122, counter_AP_0.50: 0.0125, door_AP_0.50: 0.0365, bookshelf_AP_0.50: 0.2107, refrigerator_AP_0.50: 0.1376, sink_AP_0.50: 0.1697, curtain_AP_0.50: 0.0166, bed_AP_0.50: 0.6683, picture_AP_0.50: 0.0011, toilet_AP_0.50: 0.5063, bathtub_AP_0.50: 0.6052, showercurtrain_AP_0.50: 0.0013, mAP_0.50: 0.2292, chair_rec_0.50: 0.5336, window_rec_0.50: 0.1135, cabinet_rec_0.50: 0.2742, table_rec_0.50: 0.4800, desk_rec_0.50: 0.6378, garbagebin_rec_0.50: 0.2566, sofa_rec_0.50: 0.5052, counter_rec_0.50: 0.1923, door_rec_0.50: 0.1692, bookshelf_rec_0.50: 0.4675, refrigerator_rec_0.50: 0.3158, sink_rec_0.50: 0.2449, curtain_rec_0.50: 0.1343, bed_rec_0.50: 0.7284, picture_rec_0.50: 0.0090, toilet_rec_0.50: 0.5690, bathtub_rec_0.50: 0.6452, showercurtrain_rec_0.50: 0.0714, mAR_0.50: 0.3527
+2023-02-01 13:22:27,471 - mmdet - INFO - Epoch [7][50/901]	lr: 1.000e-04, eta: 2:38:23, time: 1.825, data_time: 0.079, memory: 10776, loss_occ: 0.3865, acc_occ: 0.9227, loss_centerness: 0.6267, loss_bbox: 0.3957, loss_cls: 0.2281, loss: 1.6370, grad_norm: 4.4957
+2023-02-01 13:23:55,623 - mmdet - INFO - Epoch [7][100/901]	lr: 1.000e-04, eta: 2:36:54, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.3719, acc_occ: 0.9241, loss_centerness: 0.6247, loss_bbox: 0.3948, loss_cls: 0.2209, loss: 1.6123, grad_norm: 4.7152
+2023-02-01 13:25:23,828 - mmdet - INFO - Epoch [7][150/901]	lr: 1.000e-04, eta: 2:35:25, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3898, acc_occ: 0.9224, loss_centerness: 0.6260, loss_bbox: 0.3860, loss_cls: 0.2182, loss: 1.6199, grad_norm: 4.5025
+2023-02-01 13:26:52,081 - mmdet - INFO - Epoch [7][200/901]	lr: 1.000e-04, eta: 2:33:56, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3850, acc_occ: 0.9244, loss_centerness: 0.6246, loss_bbox: 0.4027, loss_cls: 0.2272, loss: 1.6394, grad_norm: 4.9767
+2023-02-01 13:28:20,249 - mmdet - INFO - Epoch [7][250/901]	lr: 1.000e-04, eta: 2:32:26, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3853, acc_occ: 0.9283, loss_centerness: 0.6243, loss_bbox: 0.3845, loss_cls: 0.2191, loss: 1.6133, grad_norm: 4.6170
+2023-02-01 13:29:48,647 - mmdet - INFO - Epoch [7][300/901]	lr: 1.000e-04, eta: 2:30:57, time: 1.768, data_time: 0.020, memory: 10776, loss_occ: 0.3955, acc_occ: 0.9201, loss_centerness: 0.6258, loss_bbox: 0.3930, loss_cls: 0.2206, loss: 1.6349, grad_norm: 4.6923
+2023-02-01 13:31:16,809 - mmdet - INFO - Epoch [7][350/901]	lr: 1.000e-04, eta: 2:29:28, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.4007, acc_occ: 0.9220, loss_centerness: 0.6266, loss_bbox: 0.3997, loss_cls: 0.2199, loss: 1.6469, grad_norm: 5.1118
+2023-02-01 13:32:45,070 - mmdet - INFO - Epoch [7][400/901]	lr: 1.000e-04, eta: 2:27:59, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3777, acc_occ: 0.9226, loss_centerness: 0.6258, loss_bbox: 0.3902, loss_cls: 0.2190, loss: 1.6127, grad_norm: 4.6075
+2023-02-01 13:34:13,484 - mmdet - INFO - Epoch [7][450/901]	lr: 1.000e-04, eta: 2:26:30, time: 1.768, data_time: 0.020, memory: 10776, loss_occ: 0.3790, acc_occ: 0.9205, loss_centerness: 0.6261, loss_bbox: 0.3896, loss_cls: 0.2164, loss: 1.6111, grad_norm: 4.5347
+2023-02-01 13:35:41,703 - mmdet - INFO - Epoch [7][500/901]	lr: 1.000e-04, eta: 2:25:01, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3920, acc_occ: 0.9227, loss_centerness: 0.6223, loss_bbox: 0.3959, loss_cls: 0.2163, loss: 1.6264, grad_norm: 4.4759
+2023-02-01 13:37:09,932 - mmdet - INFO - Epoch [7][550/901]	lr: 1.000e-04, eta: 2:23:32, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3885, acc_occ: 0.9178, loss_centerness: 0.6248, loss_bbox: 0.3843, loss_cls: 0.2204, loss: 1.6181, grad_norm: 4.4588
+2023-02-01 13:38:38,301 - mmdet - INFO - Epoch [7][600/901]	lr: 1.000e-04, eta: 2:22:03, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.3833, acc_occ: 0.9208, loss_centerness: 0.6267, loss_bbox: 0.3959, loss_cls: 0.2331, loss: 1.6390, grad_norm: 4.9501
+2023-02-01 13:40:06,583 - mmdet - INFO - Epoch [7][650/901]	lr: 1.000e-04, eta: 2:20:34, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3696, acc_occ: 0.9252, loss_centerness: 0.6211, loss_bbox: 0.3889, loss_cls: 0.2297, loss: 1.6093, grad_norm: 4.5053
+2023-02-01 13:41:34,887 - mmdet - INFO - Epoch [7][700/901]	lr: 1.000e-04, eta: 2:19:05, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3643, acc_occ: 0.9263, loss_centerness: 0.6239, loss_bbox: 0.3862, loss_cls: 0.2118, loss: 1.5862, grad_norm: 4.5123
+2023-02-01 13:43:03,129 - mmdet - INFO - Epoch [7][750/901]	lr: 1.000e-04, eta: 2:17:36, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3881, acc_occ: 0.9239, loss_centerness: 0.6238, loss_bbox: 0.3910, loss_cls: 0.2123, loss: 1.6152, grad_norm: 4.4870
+2023-02-01 13:44:31,275 - mmdet - INFO - Epoch [7][800/901]	lr: 1.000e-04, eta: 2:16:07, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.3918, acc_occ: 0.9249, loss_centerness: 0.6295, loss_bbox: 0.3920, loss_cls: 0.2248, loss: 1.6380, grad_norm: 4.8046
+2023-02-01 13:45:59,528 - mmdet - INFO - Epoch [7][850/901]	lr: 1.000e-04, eta: 2:14:38, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.4019, acc_occ: 0.9213, loss_centerness: 0.6293, loss_bbox: 0.3816, loss_cls: 0.2166, loss: 1.6295, grad_norm: 4.6163
+2023-02-01 13:47:27,787 - mmdet - INFO - Epoch [7][900/901]	lr: 1.000e-04, eta: 2:13:09, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3883, acc_occ: 0.9228, loss_centerness: 0.6261, loss_bbox: 0.3909, loss_cls: 0.2216, loss: 1.6269, grad_norm: 4.6479
+2023-02-01 13:47:29,659 - mmdet - INFO - Saving checkpoint at 7 epochs
+2023-02-01 13:50:10,777 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7384  | 0.8070  | 0.4379  | 0.5468  |
+| cabinet        | 0.3045  | 0.6371  | 0.1269  | 0.2930  |
+| window         | 0.2468  | 0.5638  | 0.0106  | 0.1099  |
+| table          | 0.5202  | 0.7286  | 0.3328  | 0.5029  |
+| garbagebin     | 0.3268  | 0.5623  | 0.1412  | 0.2509  |
+| counter        | 0.4475  | 0.7308  | 0.1297  | 0.2115  |
+| desk           | 0.5869  | 0.9055  | 0.3414  | 0.6299  |
+| door           | 0.3542  | 0.6360  | 0.0694  | 0.2206  |
+| sink           | 0.5388  | 0.6735  | 0.2180  | 0.3367  |
+| sofa           | 0.7104  | 0.8557  | 0.4054  | 0.5464  |
+| bed            | 0.8163  | 0.8519  | 0.6900  | 0.7284  |
+| refrigerator   | 0.4243  | 0.5263  | 0.2022  | 0.3158  |
+| curtain        | 0.3499  | 0.5224  | 0.0242  | 0.1045  |
+| bookshelf      | 0.5677  | 0.8052  | 0.2119  | 0.3896  |
+| picture        | 0.0259  | 0.0811  | 0.0015  | 0.0225  |
+| toilet         | 0.9471  | 0.9483  | 0.6024  | 0.6379  |
+| bathtub        | 0.8054  | 0.8387  | 0.5226  | 0.6452  |
+| showercurtrain | 0.4868  | 0.7857  | 0.0249  | 0.1786  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.5110  | 0.6922  | 0.2496  | 0.3706  |
++----------------+---------+---------+---------+---------+
+2023-02-01 13:50:10,816 - mmdet - INFO - Epoch(val) [7][901]	chair_AP_0.25: 0.7384, cabinet_AP_0.25: 0.3045, window_AP_0.25: 0.2468, table_AP_0.25: 0.5202, garbagebin_AP_0.25: 0.3268, counter_AP_0.25: 0.4475, desk_AP_0.25: 0.5869, door_AP_0.25: 0.3542, sink_AP_0.25: 0.5388, sofa_AP_0.25: 0.7104, bed_AP_0.25: 0.8163, refrigerator_AP_0.25: 0.4243, curtain_AP_0.25: 0.3499, bookshelf_AP_0.25: 0.5677, picture_AP_0.25: 0.0259, toilet_AP_0.25: 0.9471, bathtub_AP_0.25: 0.8054, showercurtrain_AP_0.25: 0.4868, mAP_0.25: 0.5110, chair_rec_0.25: 0.8070, cabinet_rec_0.25: 0.6371, window_rec_0.25: 0.5638, table_rec_0.25: 0.7286, garbagebin_rec_0.25: 0.5623, counter_rec_0.25: 0.7308, desk_rec_0.25: 0.9055, door_rec_0.25: 0.6360, sink_rec_0.25: 0.6735, sofa_rec_0.25: 0.8557, bed_rec_0.25: 0.8519, refrigerator_rec_0.25: 0.5263, curtain_rec_0.25: 0.5224, bookshelf_rec_0.25: 0.8052, picture_rec_0.25: 0.0811, toilet_rec_0.25: 0.9483, bathtub_rec_0.25: 0.8387, showercurtrain_rec_0.25: 0.7857, mAR_0.25: 0.6922, chair_AP_0.50: 0.4379, cabinet_AP_0.50: 0.1269, window_AP_0.50: 0.0106, table_AP_0.50: 0.3328, garbagebin_AP_0.50: 0.1412, counter_AP_0.50: 0.1297, desk_AP_0.50: 0.3414, door_AP_0.50: 0.0694, sink_AP_0.50: 0.2180, sofa_AP_0.50: 0.4054, bed_AP_0.50: 0.6900, refrigerator_AP_0.50: 0.2022, curtain_AP_0.50: 0.0242, bookshelf_AP_0.50: 0.2119, picture_AP_0.50: 0.0015, toilet_AP_0.50: 0.6024, bathtub_AP_0.50: 0.5226, showercurtrain_AP_0.50: 0.0249, mAP_0.50: 0.2496, chair_rec_0.50: 0.5468, cabinet_rec_0.50: 0.2930, window_rec_0.50: 0.1099, table_rec_0.50: 0.5029, garbagebin_rec_0.50: 0.2509, counter_rec_0.50: 0.2115, desk_rec_0.50: 0.6299, door_rec_0.50: 0.2206, sink_rec_0.50: 0.3367, sofa_rec_0.50: 0.5464, bed_rec_0.50: 0.7284, refrigerator_rec_0.50: 0.3158, curtain_rec_0.50: 0.1045, bookshelf_rec_0.50: 0.3896, picture_rec_0.50: 0.0225, toilet_rec_0.50: 0.6379, bathtub_rec_0.50: 0.6452, showercurtrain_rec_0.50: 0.1786, mAR_0.50: 0.3706
+2023-02-01 13:51:42,788 - mmdet - INFO - Epoch [8][50/901]	lr: 1.000e-04, eta: 2:11:40, time: 1.829, data_time: 0.080, memory: 10776, loss_occ: 0.3916, acc_occ: 0.9253, loss_centerness: 0.6232, loss_bbox: 0.3804, loss_cls: 0.2237, loss: 1.6189, grad_norm: 4.6031
+2023-02-01 13:53:11,022 - mmdet - INFO - Epoch [8][100/901]	lr: 1.000e-04, eta: 2:10:11, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3911, acc_occ: 0.9242, loss_centerness: 0.6223, loss_bbox: 0.3826, loss_cls: 0.2059, loss: 1.6019, grad_norm: 4.5915
+2023-02-01 13:54:39,319 - mmdet - INFO - Epoch [8][150/901]	lr: 1.000e-04, eta: 2:08:42, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3673, acc_occ: 0.9255, loss_centerness: 0.6251, loss_bbox: 0.3768, loss_cls: 0.2106, loss: 1.5798, grad_norm: 4.7884
+2023-02-01 13:56:07,658 - mmdet - INFO - Epoch [8][200/901]	lr: 1.000e-04, eta: 2:07:13, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3853, acc_occ: 0.9225, loss_centerness: 0.6250, loss_bbox: 0.3740, loss_cls: 0.2106, loss: 1.5950, grad_norm: 4.5509
+2023-02-01 13:57:35,827 - mmdet - INFO - Epoch [8][250/901]	lr: 1.000e-04, eta: 2:05:44, time: 1.763, data_time: 0.020, memory: 10776, loss_occ: 0.3837, acc_occ: 0.9244, loss_centerness: 0.6222, loss_bbox: 0.3817, loss_cls: 0.2103, loss: 1.5979, grad_norm: 4.5334
+2023-02-01 13:59:04,197 - mmdet - INFO - Epoch [8][300/901]	lr: 1.000e-04, eta: 2:04:15, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3685, acc_occ: 0.9275, loss_centerness: 0.6240, loss_bbox: 0.3810, loss_cls: 0.2169, loss: 1.5904, grad_norm: 4.8040
+2023-02-01 14:00:32,371 - mmdet - INFO - Epoch [8][350/901]	lr: 1.000e-04, eta: 2:02:46, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3779, acc_occ: 0.9229, loss_centerness: 0.6264, loss_bbox: 0.3816, loss_cls: 0.2162, loss: 1.6020, grad_norm: 4.8245
+2023-02-01 14:02:00,592 - mmdet - INFO - Epoch [8][400/901]	lr: 1.000e-04, eta: 2:01:17, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3778, acc_occ: 0.9246, loss_centerness: 0.6225, loss_bbox: 0.3850, loss_cls: 0.2158, loss: 1.6011, grad_norm: 4.5885
+2023-02-01 14:03:28,774 - mmdet - INFO - Epoch [8][450/901]	lr: 1.000e-04, eta: 1:59:48, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3756, acc_occ: 0.9213, loss_centerness: 0.6235, loss_bbox: 0.3878, loss_cls: 0.2175, loss: 1.6045, grad_norm: 4.3155
+2023-02-01 14:04:57,054 - mmdet - INFO - Epoch [8][500/901]	lr: 1.000e-04, eta: 1:58:19, time: 1.766, data_time: 0.020, memory: 10776, loss_occ: 0.3884, acc_occ: 0.9265, loss_centerness: 0.6264, loss_bbox: 0.3688, loss_cls: 0.2047, loss: 1.5884, grad_norm: 4.4745
+2023-02-01 14:06:25,506 - mmdet - INFO - Epoch [8][550/901]	lr: 1.000e-04, eta: 1:56:51, time: 1.769, data_time: 0.020, memory: 10776, loss_occ: 0.3813, acc_occ: 0.9234, loss_centerness: 0.6226, loss_bbox: 0.3815, loss_cls: 0.2174, loss: 1.6027, grad_norm: 4.4428
+2023-02-01 14:07:53,880 - mmdet - INFO - Epoch [8][600/901]	lr: 1.000e-04, eta: 1:55:22, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.3927, acc_occ: 0.9228, loss_centerness: 0.6271, loss_bbox: 0.3627, loss_cls: 0.2076, loss: 1.5902, grad_norm: 4.7536
+2023-02-01 14:09:22,272 - mmdet - INFO - Epoch [8][650/901]	lr: 1.000e-04, eta: 1:53:53, time: 1.768, data_time: 0.021, memory: 10776, loss_occ: 0.3767, acc_occ: 0.9248, loss_centerness: 0.6208, loss_bbox: 0.3736, loss_cls: 0.2047, loss: 1.5759, grad_norm: 4.5036
+2023-02-01 14:10:50,449 - mmdet - INFO - Epoch [8][700/901]	lr: 1.000e-04, eta: 1:52:24, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3871, acc_occ: 0.9277, loss_centerness: 0.6210, loss_bbox: 0.3772, loss_cls: 0.2067, loss: 1.5919, grad_norm: 4.6673
+2023-02-01 14:12:18,900 - mmdet - INFO - Epoch [8][750/901]	lr: 1.000e-04, eta: 1:50:55, time: 1.769, data_time: 0.020, memory: 10776, loss_occ: 0.3758, acc_occ: 0.9226, loss_centerness: 0.6231, loss_bbox: 0.3809, loss_cls: 0.2114, loss: 1.5913, grad_norm: 4.4311
+2023-02-01 14:13:47,114 - mmdet - INFO - Epoch [8][800/901]	lr: 1.000e-04, eta: 1:49:27, time: 1.764, data_time: 0.020, memory: 10776, loss_occ: 0.3881, acc_occ: 0.9264, loss_centerness: 0.6262, loss_bbox: 0.3736, loss_cls: 0.2083, loss: 1.5962, grad_norm: 4.5116
+2023-02-01 14:15:15,541 - mmdet - INFO - Epoch [8][850/901]	lr: 1.000e-04, eta: 1:47:58, time: 1.769, data_time: 0.019, memory: 10776, loss_occ: 0.3891, acc_occ: 0.9246, loss_centerness: 0.6241, loss_bbox: 0.3804, loss_cls: 0.2046, loss: 1.5981, grad_norm: 4.8499
+2023-02-01 14:16:43,789 - mmdet - INFO - Epoch [8][900/901]	lr: 1.000e-04, eta: 1:46:29, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3660, acc_occ: 0.9300, loss_centerness: 0.6250, loss_bbox: 0.3660, loss_cls: 0.2002, loss: 1.5572, grad_norm: 4.4285
+2023-02-01 14:16:45,631 - mmdet - INFO - Saving checkpoint at 8 epochs
+2023-02-01 14:19:23,974 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7408  | 0.8180  | 0.4356  | 0.5563  |
+| window         | 0.2193  | 0.5071  | 0.0157  | 0.1277  |
+| table          | 0.5224  | 0.7171  | 0.3390  | 0.4914  |
+| cabinet        | 0.3274  | 0.6263  | 0.1397  | 0.2796  |
+| garbagebin     | 0.3038  | 0.5660  | 0.1219  | 0.2698  |
+| desk           | 0.6091  | 0.9449  | 0.3142  | 0.6220  |
+| door           | 0.4040  | 0.6381  | 0.0815  | 0.2398  |
+| sofa           | 0.7158  | 0.9072  | 0.3979  | 0.5567  |
+| counter        | 0.3969  | 0.6923  | 0.0182  | 0.1731  |
+| bed            | 0.8746  | 0.9259  | 0.7605  | 0.8395  |
+| bookshelf      | 0.5251  | 0.8831  | 0.1569  | 0.4026  |
+| refrigerator   | 0.5114  | 0.6667  | 0.2671  | 0.4035  |
+| sink           | 0.5257  | 0.6122  | 0.1573  | 0.2857  |
+| curtain        | 0.3547  | 0.5970  | 0.0211  | 0.1045  |
+| picture        | 0.0290  | 0.1261  | 0.0046  | 0.0315  |
+| toilet         | 0.9448  | 0.9483  | 0.6497  | 0.6897  |
+| bathtub        | 0.7521  | 0.8065  | 0.5931  | 0.6129  |
+| showercurtrain | 0.3938  | 0.6786  | 0.0070  | 0.1071  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.5084  | 0.7034  | 0.2490  | 0.3774  |
++----------------+---------+---------+---------+---------+
+2023-02-01 14:19:24,012 - mmdet - INFO - Epoch(val) [8][901]	chair_AP_0.25: 0.7408, window_AP_0.25: 0.2193, table_AP_0.25: 0.5224, cabinet_AP_0.25: 0.3274, garbagebin_AP_0.25: 0.3038, desk_AP_0.25: 0.6091, door_AP_0.25: 0.4040, sofa_AP_0.25: 0.7158, counter_AP_0.25: 0.3969, bed_AP_0.25: 0.8746, bookshelf_AP_0.25: 0.5251, refrigerator_AP_0.25: 0.5114, sink_AP_0.25: 0.5257, curtain_AP_0.25: 0.3547, picture_AP_0.25: 0.0290, toilet_AP_0.25: 0.9448, bathtub_AP_0.25: 0.7521, showercurtrain_AP_0.25: 0.3938, mAP_0.25: 0.5084, chair_rec_0.25: 0.8180, window_rec_0.25: 0.5071, table_rec_0.25: 0.7171, cabinet_rec_0.25: 0.6263, garbagebin_rec_0.25: 0.5660, desk_rec_0.25: 0.9449, door_rec_0.25: 0.6381, sofa_rec_0.25: 0.9072, counter_rec_0.25: 0.6923, bed_rec_0.25: 0.9259, bookshelf_rec_0.25: 0.8831, refrigerator_rec_0.25: 0.6667, sink_rec_0.25: 0.6122, curtain_rec_0.25: 0.5970, picture_rec_0.25: 0.1261, toilet_rec_0.25: 0.9483, bathtub_rec_0.25: 0.8065, showercurtrain_rec_0.25: 0.6786, mAR_0.25: 0.7034, chair_AP_0.50: 0.4356, window_AP_0.50: 0.0157, table_AP_0.50: 0.3390, cabinet_AP_0.50: 0.1397, garbagebin_AP_0.50: 0.1219, desk_AP_0.50: 0.3142, door_AP_0.50: 0.0815, sofa_AP_0.50: 0.3979, counter_AP_0.50: 0.0182, bed_AP_0.50: 0.7605, bookshelf_AP_0.50: 0.1569, refrigerator_AP_0.50: 0.2671, sink_AP_0.50: 0.1573, curtain_AP_0.50: 0.0211, picture_AP_0.50: 0.0046, toilet_AP_0.50: 0.6497, bathtub_AP_0.50: 0.5931, showercurtrain_AP_0.50: 0.0070, mAP_0.50: 0.2490, chair_rec_0.50: 0.5563, window_rec_0.50: 0.1277, table_rec_0.50: 0.4914, cabinet_rec_0.50: 0.2796, garbagebin_rec_0.50: 0.2698, desk_rec_0.50: 0.6220, door_rec_0.50: 0.2398, sofa_rec_0.50: 0.5567, counter_rec_0.50: 0.1731, bed_rec_0.50: 0.8395, bookshelf_rec_0.50: 0.4026, refrigerator_rec_0.50: 0.4035, sink_rec_0.50: 0.2857, curtain_rec_0.50: 0.1045, picture_rec_0.50: 0.0315, toilet_rec_0.50: 0.6897, bathtub_rec_0.50: 0.6129, showercurtrain_rec_0.50: 0.1071, mAR_0.50: 0.3774
+2023-02-01 14:20:55,896 - mmdet - INFO - Epoch [9][50/901]	lr: 1.000e-05, eta: 1:44:59, time: 1.828, data_time: 0.080, memory: 10776, loss_occ: 0.3597, acc_occ: 0.9265, loss_centerness: 0.6214, loss_bbox: 0.3461, loss_cls: 0.1943, loss: 1.5216, grad_norm: 4.0656
+2023-02-01 14:22:24,138 - mmdet - INFO - Epoch [9][100/901]	lr: 1.000e-05, eta: 1:43:30, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3739, acc_occ: 0.9296, loss_centerness: 0.6233, loss_bbox: 0.3364, loss_cls: 0.1810, loss: 1.5146, grad_norm: 3.9333
+2023-02-01 14:23:52,406 - mmdet - INFO - Epoch [9][150/901]	lr: 1.000e-05, eta: 1:42:02, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3707, acc_occ: 0.9291, loss_centerness: 0.6189, loss_bbox: 0.3409, loss_cls: 0.1799, loss: 1.5104, grad_norm: 3.9005
+2023-02-01 14:25:20,821 - mmdet - INFO - Epoch [9][200/901]	lr: 1.000e-05, eta: 1:40:33, time: 1.768, data_time: 0.019, memory: 10776, loss_occ: 0.3666, acc_occ: 0.9310, loss_centerness: 0.6224, loss_bbox: 0.3332, loss_cls: 0.1755, loss: 1.4977, grad_norm: 3.8260
+2023-02-01 14:26:49,281 - mmdet - INFO - Epoch [9][250/901]	lr: 1.000e-05, eta: 1:39:04, time: 1.769, data_time: 0.020, memory: 10776, loss_occ: 0.3818, acc_occ: 0.9302, loss_centerness: 0.6210, loss_bbox: 0.3384, loss_cls: 0.1863, loss: 1.5276, grad_norm: 3.8843
+2023-02-01 14:28:17,644 - mmdet - INFO - Epoch [9][300/901]	lr: 1.000e-05, eta: 1:37:35, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3658, acc_occ: 0.9337, loss_centerness: 0.6233, loss_bbox: 0.3223, loss_cls: 0.1723, loss: 1.4837, grad_norm: 3.9922
+2023-02-01 14:29:46,040 - mmdet - INFO - Epoch [9][350/901]	lr: 1.000e-05, eta: 1:36:07, time: 1.768, data_time: 0.019, memory: 10776, loss_occ: 0.3703, acc_occ: 0.9326, loss_centerness: 0.6225, loss_bbox: 0.3234, loss_cls: 0.1762, loss: 1.4925, grad_norm: 3.9357
+2023-02-01 14:31:14,298 - mmdet - INFO - Epoch [9][400/901]	lr: 1.000e-05, eta: 1:34:38, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3754, acc_occ: 0.9263, loss_centerness: 0.6214, loss_bbox: 0.3245, loss_cls: 0.1752, loss: 1.4964, grad_norm: 3.8624
+2023-02-01 14:32:42,646 - mmdet - INFO - Epoch [9][450/901]	lr: 1.000e-05, eta: 1:33:09, time: 1.767, data_time: 0.020, memory: 10776, loss_occ: 0.3568, acc_occ: 0.9312, loss_centerness: 0.6215, loss_bbox: 0.3322, loss_cls: 0.1739, loss: 1.4843, grad_norm: 3.8114
+2023-02-01 14:34:11,112 - mmdet - INFO - Epoch [9][500/901]	lr: 1.000e-05, eta: 1:31:41, time: 1.769, data_time: 0.019, memory: 10776, loss_occ: 0.3785, acc_occ: 0.9271, loss_centerness: 0.6203, loss_bbox: 0.3362, loss_cls: 0.1734, loss: 1.5085, grad_norm: 3.9032
+2023-02-01 14:35:39,511 - mmdet - INFO - Epoch [9][550/901]	lr: 1.000e-05, eta: 1:30:12, time: 1.768, data_time: 0.019, memory: 10776, loss_occ: 0.3809, acc_occ: 0.9270, loss_centerness: 0.6193, loss_bbox: 0.3371, loss_cls: 0.1807, loss: 1.5179, grad_norm: 3.9827
+2023-02-01 14:37:07,768 - mmdet - INFO - Epoch [9][600/901]	lr: 1.000e-05, eta: 1:28:43, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3737, acc_occ: 0.9311, loss_centerness: 0.6215, loss_bbox: 0.3176, loss_cls: 0.1680, loss: 1.4807, grad_norm: 3.9809
+2023-02-01 14:38:35,982 - mmdet - INFO - Epoch [9][650/901]	lr: 1.000e-05, eta: 1:27:14, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3935, acc_occ: 0.9313, loss_centerness: 0.6181, loss_bbox: 0.3289, loss_cls: 0.1783, loss: 1.5187, grad_norm: 3.9747
+2023-02-01 14:40:04,329 - mmdet - INFO - Epoch [9][700/901]	lr: 1.000e-05, eta: 1:25:46, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3625, acc_occ: 0.9283, loss_centerness: 0.6160, loss_bbox: 0.3226, loss_cls: 0.1749, loss: 1.4761, grad_norm: 3.9669
+2023-02-01 14:41:32,472 - mmdet - INFO - Epoch [9][750/901]	lr: 1.000e-05, eta: 1:24:17, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3711, acc_occ: 0.9301, loss_centerness: 0.6199, loss_bbox: 0.3253, loss_cls: 0.1742, loss: 1.4906, grad_norm: 4.0341
+2023-02-01 14:43:00,701 - mmdet - INFO - Epoch [9][800/901]	lr: 1.000e-05, eta: 1:22:48, time: 1.765, data_time: 0.020, memory: 10776, loss_occ: 0.3753, acc_occ: 0.9303, loss_centerness: 0.6209, loss_bbox: 0.3265, loss_cls: 0.1709, loss: 1.4937, grad_norm: 4.0777
+2023-02-01 14:44:28,821 - mmdet - INFO - Epoch [9][850/901]	lr: 1.000e-05, eta: 1:21:19, time: 1.762, data_time: 0.020, memory: 10776, loss_occ: 0.3718, acc_occ: 0.9332, loss_centerness: 0.6181, loss_bbox: 0.3205, loss_cls: 0.1708, loss: 1.4812, grad_norm: 4.0927
+2023-02-01 14:45:56,928 - mmdet - INFO - Epoch [9][900/901]	lr: 1.000e-05, eta: 1:19:51, time: 1.762, data_time: 0.019, memory: 10776, loss_occ: 0.3806, acc_occ: 0.9340, loss_centerness: 0.6181, loss_bbox: 0.3152, loss_cls: 0.1660, loss: 1.4800, grad_norm: 4.1308
+2023-02-01 14:45:58,804 - mmdet - INFO - Saving checkpoint at 9 epochs
+2023-02-01 14:48:39,726 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7516  | 0.8202  | 0.4616  | 0.5687  |
+| window         | 0.2636  | 0.5567  | 0.0206  | 0.1277  |
+| cabinet        | 0.3802  | 0.6747  | 0.1592  | 0.3145  |
+| table          | 0.5957  | 0.7800  | 0.3892  | 0.5314  |
+| garbagebin     | 0.3535  | 0.5792  | 0.1697  | 0.3038  |
+| door           | 0.4113  | 0.6531  | 0.0786  | 0.2377  |
+| counter        | 0.4504  | 0.7115  | 0.1326  | 0.2115  |
+| sink           | 0.5438  | 0.6633  | 0.2312  | 0.3571  |
+| sofa           | 0.7387  | 0.8763  | 0.4169  | 0.5670  |
+| refrigerator   | 0.4833  | 0.6667  | 0.2337  | 0.4035  |
+| desk           | 0.7257  | 0.9213  | 0.4695  | 0.6535  |
+| bookshelf      | 0.5675  | 0.8571  | 0.2920  | 0.5065  |
+| curtain        | 0.3903  | 0.6269  | 0.0386  | 0.1791  |
+| bed            | 0.8589  | 0.9012  | 0.7273  | 0.7778  |
+| bathtub        | 0.7983  | 0.8387  | 0.5744  | 0.6452  |
+| picture        | 0.0335  | 0.1261  | 0.0014  | 0.0225  |
+| toilet         | 0.9530  | 0.9655  | 0.6855  | 0.7241  |
+| showercurtrain | 0.5134  | 0.7143  | 0.0295  | 0.1786  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.5452  | 0.7185  | 0.2840  | 0.4061  |
++----------------+---------+---------+---------+---------+
+2023-02-01 14:48:39,762 - mmdet - INFO - Epoch(val) [9][901]	chair_AP_0.25: 0.7516, window_AP_0.25: 0.2636, cabinet_AP_0.25: 0.3802, table_AP_0.25: 0.5957, garbagebin_AP_0.25: 0.3535, door_AP_0.25: 0.4113, counter_AP_0.25: 0.4504, sink_AP_0.25: 0.5438, sofa_AP_0.25: 0.7387, refrigerator_AP_0.25: 0.4833, desk_AP_0.25: 0.7257, bookshelf_AP_0.25: 0.5675, curtain_AP_0.25: 0.3903, bed_AP_0.25: 0.8589, bathtub_AP_0.25: 0.7983, picture_AP_0.25: 0.0335, toilet_AP_0.25: 0.9530, showercurtrain_AP_0.25: 0.5134, mAP_0.25: 0.5452, chair_rec_0.25: 0.8202, window_rec_0.25: 0.5567, cabinet_rec_0.25: 0.6747, table_rec_0.25: 0.7800, garbagebin_rec_0.25: 0.5792, door_rec_0.25: 0.6531, counter_rec_0.25: 0.7115, sink_rec_0.25: 0.6633, sofa_rec_0.25: 0.8763, refrigerator_rec_0.25: 0.6667, desk_rec_0.25: 0.9213, bookshelf_rec_0.25: 0.8571, curtain_rec_0.25: 0.6269, bed_rec_0.25: 0.9012, bathtub_rec_0.25: 0.8387, picture_rec_0.25: 0.1261, toilet_rec_0.25: 0.9655, showercurtrain_rec_0.25: 0.7143, mAR_0.25: 0.7185, chair_AP_0.50: 0.4616, window_AP_0.50: 0.0206, cabinet_AP_0.50: 0.1592, table_AP_0.50: 0.3892, garbagebin_AP_0.50: 0.1697, door_AP_0.50: 0.0786, counter_AP_0.50: 0.1326, sink_AP_0.50: 0.2312, sofa_AP_0.50: 0.4169, refrigerator_AP_0.50: 0.2337, desk_AP_0.50: 0.4695, bookshelf_AP_0.50: 0.2920, curtain_AP_0.50: 0.0386, bed_AP_0.50: 0.7273, bathtub_AP_0.50: 0.5744, picture_AP_0.50: 0.0014, toilet_AP_0.50: 0.6855, showercurtrain_AP_0.50: 0.0295, mAP_0.50: 0.2840, chair_rec_0.50: 0.5687, window_rec_0.50: 0.1277, cabinet_rec_0.50: 0.3145, table_rec_0.50: 0.5314, garbagebin_rec_0.50: 0.3038, door_rec_0.50: 0.2377, counter_rec_0.50: 0.2115, sink_rec_0.50: 0.3571, sofa_rec_0.50: 0.5670, refrigerator_rec_0.50: 0.4035, desk_rec_0.50: 0.6535, bookshelf_rec_0.50: 0.5065, curtain_rec_0.50: 0.1791, bed_rec_0.50: 0.7778, bathtub_rec_0.50: 0.6452, picture_rec_0.50: 0.0225, toilet_rec_0.50: 0.7241, showercurtrain_rec_0.50: 0.1786, mAR_0.50: 0.4061
+2023-02-01 14:50:11,858 - mmdet - INFO - Epoch [10][50/901]	lr: 1.000e-05, eta: 1:18:21, time: 1.833, data_time: 0.079, memory: 10776, loss_occ: 0.3616, acc_occ: 0.9300, loss_centerness: 0.6186, loss_bbox: 0.3161, loss_cls: 0.1707, loss: 1.4670, grad_norm: 3.8677
+2023-02-01 14:51:40,198 - mmdet - INFO - Epoch [10][100/901]	lr: 1.000e-05, eta: 1:16:52, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3515, acc_occ: 0.9295, loss_centerness: 0.6190, loss_bbox: 0.3120, loss_cls: 0.1679, loss: 1.4504, grad_norm: 3.8456
+2023-02-01 14:53:08,312 - mmdet - INFO - Epoch [10][150/901]	lr: 1.000e-05, eta: 1:15:23, time: 1.762, data_time: 0.019, memory: 10776, loss_occ: 0.3990, acc_occ: 0.9304, loss_centerness: 0.6217, loss_bbox: 0.3145, loss_cls: 0.1768, loss: 1.5121, grad_norm: 4.0639
+2023-02-01 14:54:36,778 - mmdet - INFO - Epoch [10][200/901]	lr: 1.000e-05, eta: 1:13:55, time: 1.769, data_time: 0.019, memory: 10776, loss_occ: 0.3693, acc_occ: 0.9305, loss_centerness: 0.6217, loss_bbox: 0.3129, loss_cls: 0.1666, loss: 1.4705, grad_norm: 3.9586
+2023-02-01 14:56:05,001 - mmdet - INFO - Epoch [10][250/901]	lr: 1.000e-05, eta: 1:12:26, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3677, acc_occ: 0.9344, loss_centerness: 0.6155, loss_bbox: 0.3132, loss_cls: 0.1693, loss: 1.4657, grad_norm: 4.2363
+2023-02-01 14:57:32,989 - mmdet - INFO - Epoch [10][300/901]	lr: 1.000e-05, eta: 1:10:57, time: 1.760, data_time: 0.019, memory: 10776, loss_occ: 0.3796, acc_occ: 0.9293, loss_centerness: 0.6251, loss_bbox: 0.3187, loss_cls: 0.1671, loss: 1.4905, grad_norm: 4.0490
+2023-02-01 14:59:01,120 - mmdet - INFO - Epoch [10][350/901]	lr: 1.000e-05, eta: 1:09:28, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3700, acc_occ: 0.9308, loss_centerness: 0.6196, loss_bbox: 0.3043, loss_cls: 0.1640, loss: 1.4579, grad_norm: 3.8829
+2023-02-01 15:00:29,276 - mmdet - INFO - Epoch [10][400/901]	lr: 1.000e-05, eta: 1:08:00, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3644, acc_occ: 0.9318, loss_centerness: 0.6159, loss_bbox: 0.3242, loss_cls: 0.1707, loss: 1.4753, grad_norm: 4.1443
+2023-02-01 15:01:57,346 - mmdet - INFO - Epoch [10][450/901]	lr: 1.000e-05, eta: 1:06:31, time: 1.762, data_time: 0.019, memory: 10776, loss_occ: 0.3597, acc_occ: 0.9348, loss_centerness: 0.6197, loss_bbox: 0.3204, loss_cls: 0.1646, loss: 1.4644, grad_norm: 3.9874
+2023-02-01 15:03:25,793 - mmdet - INFO - Epoch [10][500/901]	lr: 1.000e-05, eta: 1:05:02, time: 1.769, data_time: 0.019, memory: 10776, loss_occ: 0.3818, acc_occ: 0.9301, loss_centerness: 0.6193, loss_bbox: 0.3102, loss_cls: 0.1705, loss: 1.4818, grad_norm: 4.0833
+2023-02-01 15:04:54,049 - mmdet - INFO - Epoch [10][550/901]	lr: 1.000e-05, eta: 1:03:34, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3760, acc_occ: 0.9313, loss_centerness: 0.6161, loss_bbox: 0.3113, loss_cls: 0.1616, loss: 1.4649, grad_norm: 3.9671
+2023-02-01 15:06:22,118 - mmdet - INFO - Epoch [10][600/901]	lr: 1.000e-05, eta: 1:02:05, time: 1.761, data_time: 0.019, memory: 10776, loss_occ: 0.3759, acc_occ: 0.9316, loss_centerness: 0.6161, loss_bbox: 0.3158, loss_cls: 0.1708, loss: 1.4786, grad_norm: 4.1374
+2023-02-01 15:07:50,421 - mmdet - INFO - Epoch [10][650/901]	lr: 1.000e-05, eta: 1:00:36, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3728, acc_occ: 0.9352, loss_centerness: 0.6172, loss_bbox: 0.3070, loss_cls: 0.1654, loss: 1.4624, grad_norm: 4.2660
+2023-02-01 15:09:18,698 - mmdet - INFO - Epoch [10][700/901]	lr: 1.000e-05, eta: 0:59:08, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3499, acc_occ: 0.9300, loss_centerness: 0.6159, loss_bbox: 0.3128, loss_cls: 0.1676, loss: 1.4461, grad_norm: 4.0751
+2023-02-01 15:10:46,943 - mmdet - INFO - Epoch [10][750/901]	lr: 1.000e-05, eta: 0:57:39, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3718, acc_occ: 0.9338, loss_centerness: 0.6207, loss_bbox: 0.3169, loss_cls: 0.1681, loss: 1.4776, grad_norm: 4.0686
+2023-02-01 15:12:14,995 - mmdet - INFO - Epoch [10][800/901]	lr: 1.000e-05, eta: 0:56:10, time: 1.761, data_time: 0.019, memory: 10776, loss_occ: 0.3747, acc_occ: 0.9329, loss_centerness: 0.6214, loss_bbox: 0.3121, loss_cls: 0.1636, loss: 1.4718, grad_norm: 4.1252
+2023-02-01 15:13:43,231 - mmdet - INFO - Epoch [10][850/901]	lr: 1.000e-05, eta: 0:54:42, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3815, acc_occ: 0.9319, loss_centerness: 0.6163, loss_bbox: 0.3151, loss_cls: 0.1636, loss: 1.4765, grad_norm: 4.1335
+2023-02-01 15:15:11,338 - mmdet - INFO - Epoch [10][900/901]	lr: 1.000e-05, eta: 0:53:13, time: 1.762, data_time: 0.019, memory: 10776, loss_occ: 0.3822, acc_occ: 0.9307, loss_centerness: 0.6243, loss_bbox: 0.3077, loss_cls: 0.1681, loss: 1.4822, grad_norm: 4.1457
+2023-02-01 15:15:13,193 - mmdet - INFO - Saving checkpoint at 10 epochs
+2023-02-01 15:17:52,183 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7459  | 0.8180  | 0.4570  | 0.5570  |
+| window         | 0.2741  | 0.5426  | 0.0252  | 0.1277  |
+| cabinet        | 0.4032  | 0.6774  | 0.1514  | 0.3038  |
+| table          | 0.6009  | 0.7771  | 0.4088  | 0.5257  |
+| garbagebin     | 0.3487  | 0.5547  | 0.1630  | 0.2755  |
+| desk           | 0.7135  | 0.9449  | 0.4441  | 0.6457  |
+| door           | 0.4085  | 0.6574  | 0.0768  | 0.2313  |
+| counter        | 0.4110  | 0.7115  | 0.0728  | 0.1923  |
+| sink           | 0.5411  | 0.6633  | 0.2378  | 0.3367  |
+| sofa           | 0.7455  | 0.8763  | 0.4866  | 0.5979  |
+| refrigerator   | 0.5278  | 0.7544  | 0.2668  | 0.3860  |
+| bookshelf      | 0.5856  | 0.8831  | 0.3027  | 0.5195  |
+| curtain        | 0.3779  | 0.6269  | 0.0245  | 0.1194  |
+| bed            | 0.8778  | 0.9136  | 0.7707  | 0.8272  |
+| bathtub        | 0.8122  | 0.8387  | 0.5806  | 0.6452  |
+| picture        | 0.0458  | 0.1306  | 0.0023  | 0.0270  |
+| toilet         | 0.9525  | 0.9655  | 0.6990  | 0.7414  |
+| showercurtrain | 0.4726  | 0.7143  | 0.0258  | 0.1786  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.5469  | 0.7250  | 0.2887  | 0.4021  |
++----------------+---------+---------+---------+---------+
+2023-02-01 15:17:52,218 - mmdet - INFO - Epoch(val) [10][901]	chair_AP_0.25: 0.7459, window_AP_0.25: 0.2741, cabinet_AP_0.25: 0.4032, table_AP_0.25: 0.6009, garbagebin_AP_0.25: 0.3487, desk_AP_0.25: 0.7135, door_AP_0.25: 0.4085, counter_AP_0.25: 0.4110, sink_AP_0.25: 0.5411, sofa_AP_0.25: 0.7455, refrigerator_AP_0.25: 0.5278, bookshelf_AP_0.25: 0.5856, curtain_AP_0.25: 0.3779, bed_AP_0.25: 0.8778, bathtub_AP_0.25: 0.8122, picture_AP_0.25: 0.0458, toilet_AP_0.25: 0.9525, showercurtrain_AP_0.25: 0.4726, mAP_0.25: 0.5469, chair_rec_0.25: 0.8180, window_rec_0.25: 0.5426, cabinet_rec_0.25: 0.6774, table_rec_0.25: 0.7771, garbagebin_rec_0.25: 0.5547, desk_rec_0.25: 0.9449, door_rec_0.25: 0.6574, counter_rec_0.25: 0.7115, sink_rec_0.25: 0.6633, sofa_rec_0.25: 0.8763, refrigerator_rec_0.25: 0.7544, bookshelf_rec_0.25: 0.8831, curtain_rec_0.25: 0.6269, bed_rec_0.25: 0.9136, bathtub_rec_0.25: 0.8387, picture_rec_0.25: 0.1306, toilet_rec_0.25: 0.9655, showercurtrain_rec_0.25: 0.7143, mAR_0.25: 0.7250, chair_AP_0.50: 0.4570, window_AP_0.50: 0.0252, cabinet_AP_0.50: 0.1514, table_AP_0.50: 0.4088, garbagebin_AP_0.50: 0.1630, desk_AP_0.50: 0.4441, door_AP_0.50: 0.0768, counter_AP_0.50: 0.0728, sink_AP_0.50: 0.2378, sofa_AP_0.50: 0.4866, refrigerator_AP_0.50: 0.2668, bookshelf_AP_0.50: 0.3027, curtain_AP_0.50: 0.0245, bed_AP_0.50: 0.7707, bathtub_AP_0.50: 0.5806, picture_AP_0.50: 0.0023, toilet_AP_0.50: 0.6990, showercurtrain_AP_0.50: 0.0258, mAP_0.50: 0.2887, chair_rec_0.50: 0.5570, window_rec_0.50: 0.1277, cabinet_rec_0.50: 0.3038, table_rec_0.50: 0.5257, garbagebin_rec_0.50: 0.2755, desk_rec_0.50: 0.6457, door_rec_0.50: 0.2313, counter_rec_0.50: 0.1923, sink_rec_0.50: 0.3367, sofa_rec_0.50: 0.5979, refrigerator_rec_0.50: 0.3860, bookshelf_rec_0.50: 0.5195, curtain_rec_0.50: 0.1194, bed_rec_0.50: 0.8272, bathtub_rec_0.50: 0.6452, picture_rec_0.50: 0.0270, toilet_rec_0.50: 0.7414, showercurtrain_rec_0.50: 0.1786, mAR_0.50: 0.4021
+2023-02-01 15:19:23,920 - mmdet - INFO - Epoch [11][50/901]	lr: 1.000e-05, eta: 0:51:43, time: 1.825, data_time: 0.079, memory: 10776, loss_occ: 0.3672, acc_occ: 0.9314, loss_centerness: 0.6136, loss_bbox: 0.3135, loss_cls: 0.1646, loss: 1.4589, grad_norm: 3.8901
+2023-02-01 15:20:52,228 - mmdet - INFO - Epoch [11][100/901]	lr: 1.000e-05, eta: 0:50:14, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3739, acc_occ: 0.9350, loss_centerness: 0.6230, loss_bbox: 0.3082, loss_cls: 0.1645, loss: 1.4697, grad_norm: 4.2100
+2023-02-01 15:22:20,445 - mmdet - INFO - Epoch [11][150/901]	lr: 1.000e-05, eta: 0:48:46, time: 1.764, data_time: 0.018, memory: 10776, loss_occ: 0.3668, acc_occ: 0.9346, loss_centerness: 0.6160, loss_bbox: 0.3020, loss_cls: 0.1608, loss: 1.4456, grad_norm: 4.1888
+2023-02-01 15:23:48,636 - mmdet - INFO - Epoch [11][200/901]	lr: 1.000e-05, eta: 0:47:17, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3569, acc_occ: 0.9350, loss_centerness: 0.6192, loss_bbox: 0.3066, loss_cls: 0.1639, loss: 1.4466, grad_norm: 4.2280
+2023-02-01 15:25:16,912 - mmdet - INFO - Epoch [11][250/901]	lr: 1.000e-05, eta: 0:45:48, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3576, acc_occ: 0.9361, loss_centerness: 0.6171, loss_bbox: 0.3066, loss_cls: 0.1573, loss: 1.4386, grad_norm: 4.0805
+2023-02-01 15:26:45,123 - mmdet - INFO - Epoch [11][300/901]	lr: 1.000e-05, eta: 0:44:20, time: 1.764, data_time: 0.018, memory: 10776, loss_occ: 0.3686, acc_occ: 0.9331, loss_centerness: 0.6191, loss_bbox: 0.3090, loss_cls: 0.1628, loss: 1.4595, grad_norm: 4.0523
+2023-02-01 15:28:13,403 - mmdet - INFO - Epoch [11][350/901]	lr: 1.000e-05, eta: 0:42:51, time: 1.766, data_time: 0.018, memory: 10776, loss_occ: 0.3764, acc_occ: 0.9295, loss_centerness: 0.6159, loss_bbox: 0.3088, loss_cls: 0.1676, loss: 1.4687, grad_norm: 3.8619
+2023-02-01 15:29:41,519 - mmdet - INFO - Epoch [11][400/901]	lr: 1.000e-05, eta: 0:41:23, time: 1.762, data_time: 0.019, memory: 10776, loss_occ: 0.3603, acc_occ: 0.9346, loss_centerness: 0.6179, loss_bbox: 0.3091, loss_cls: 0.1583, loss: 1.4456, grad_norm: 4.0620
+2023-02-01 15:31:09,745 - mmdet - INFO - Epoch [11][450/901]	lr: 1.000e-05, eta: 0:39:54, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3767, acc_occ: 0.9304, loss_centerness: 0.6222, loss_bbox: 0.3104, loss_cls: 0.1620, loss: 1.4712, grad_norm: 4.3869
+2023-02-01 15:32:37,904 - mmdet - INFO - Epoch [11][500/901]	lr: 1.000e-05, eta: 0:38:25, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3765, acc_occ: 0.9296, loss_centerness: 0.6179, loss_bbox: 0.3020, loss_cls: 0.1580, loss: 1.4545, grad_norm: 4.1209
+2023-02-01 15:34:06,371 - mmdet - INFO - Epoch [11][550/901]	lr: 1.000e-05, eta: 0:36:57, time: 1.769, data_time: 0.020, memory: 10776, loss_occ: 0.3753, acc_occ: 0.9343, loss_centerness: 0.6200, loss_bbox: 0.3017, loss_cls: 0.1582, loss: 1.4551, grad_norm: 4.0465
+2023-02-01 15:35:34,603 - mmdet - INFO - Epoch [11][600/901]	lr: 1.000e-05, eta: 0:35:28, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3707, acc_occ: 0.9322, loss_centerness: 0.6218, loss_bbox: 0.3010, loss_cls: 0.1576, loss: 1.4511, grad_norm: 4.0709
+2023-02-01 15:37:02,944 - mmdet - INFO - Epoch [11][650/901]	lr: 1.000e-05, eta: 0:34:00, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3701, acc_occ: 0.9313, loss_centerness: 0.6169, loss_bbox: 0.3051, loss_cls: 0.1619, loss: 1.4539, grad_norm: 4.2232
+2023-02-01 15:38:31,084 - mmdet - INFO - Epoch [11][700/901]	lr: 1.000e-05, eta: 0:32:31, time: 1.763, data_time: 0.018, memory: 10776, loss_occ: 0.3731, acc_occ: 0.9315, loss_centerness: 0.6200, loss_bbox: 0.3064, loss_cls: 0.1612, loss: 1.4608, grad_norm: 4.0016
+2023-02-01 15:39:59,341 - mmdet - INFO - Epoch [11][750/901]	lr: 1.000e-05, eta: 0:31:02, time: 1.765, data_time: 0.018, memory: 10776, loss_occ: 0.3760, acc_occ: 0.9280, loss_centerness: 0.6177, loss_bbox: 0.3142, loss_cls: 0.1642, loss: 1.4720, grad_norm: 4.0012
+2023-02-01 15:41:27,528 - mmdet - INFO - Epoch [11][800/901]	lr: 1.000e-05, eta: 0:29:34, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3768, acc_occ: 0.9323, loss_centerness: 0.6176, loss_bbox: 0.2978, loss_cls: 0.1584, loss: 1.4505, grad_norm: 4.0429
+2023-02-01 15:42:55,843 - mmdet - INFO - Epoch [11][850/901]	lr: 1.000e-05, eta: 0:28:05, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3586, acc_occ: 0.9303, loss_centerness: 0.6142, loss_bbox: 0.3065, loss_cls: 0.1618, loss: 1.4411, grad_norm: 4.4914
+2023-02-01 15:44:24,083 - mmdet - INFO - Epoch [11][900/901]	lr: 1.000e-05, eta: 0:26:37, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3777, acc_occ: 0.9337, loss_centerness: 0.6201, loss_bbox: 0.2970, loss_cls: 0.1645, loss: 1.4593, grad_norm: 4.2735
+2023-02-01 15:44:25,944 - mmdet - INFO - Saving checkpoint at 11 epochs
+2023-02-01 15:47:03,278 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7510  | 0.8238  | 0.4640  | 0.5629  |
+| window         | 0.2446  | 0.5319  | 0.0264  | 0.1454  |
+| cabinet        | 0.4009  | 0.6640  | 0.1552  | 0.3011  |
+| table          | 0.5946  | 0.7771  | 0.3880  | 0.5286  |
+| garbagebin     | 0.3626  | 0.5660  | 0.1654  | 0.2868  |
+| sofa           | 0.7552  | 0.8969  | 0.4454  | 0.5567  |
+| sink           | 0.5656  | 0.6837  | 0.1946  | 0.3469  |
+| counter        | 0.4225  | 0.7308  | 0.1174  | 0.2692  |
+| desk           | 0.7088  | 0.9134  | 0.4225  | 0.6457  |
+| bookshelf      | 0.5812  | 0.8571  | 0.2841  | 0.5065  |
+| refrigerator   | 0.5343  | 0.7018  | 0.2670  | 0.4211  |
+| door           | 0.4107  | 0.6360  | 0.0858  | 0.2270  |
+| curtain        | 0.3326  | 0.6119  | 0.0357  | 0.1343  |
+| bed            | 0.8534  | 0.8642  | 0.7568  | 0.8025  |
+| toilet         | 0.9508  | 0.9655  | 0.6932  | 0.7241  |
+| bathtub        | 0.8126  | 0.8387  | 0.5601  | 0.6129  |
+| picture        | 0.0451  | 0.1396  | 0.0010  | 0.0180  |
+| showercurtrain | 0.4767  | 0.6786  | 0.0136  | 0.1071  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.5446  | 0.7156  | 0.2820  | 0.3998  |
++----------------+---------+---------+---------+---------+
+2023-02-01 15:47:03,313 - mmdet - INFO - Epoch(val) [11][901]	chair_AP_0.25: 0.7510, window_AP_0.25: 0.2446, cabinet_AP_0.25: 0.4009, table_AP_0.25: 0.5946, garbagebin_AP_0.25: 0.3626, sofa_AP_0.25: 0.7552, sink_AP_0.25: 0.5656, counter_AP_0.25: 0.4225, desk_AP_0.25: 0.7088, bookshelf_AP_0.25: 0.5812, refrigerator_AP_0.25: 0.5343, door_AP_0.25: 0.4107, curtain_AP_0.25: 0.3326, bed_AP_0.25: 0.8534, toilet_AP_0.25: 0.9508, bathtub_AP_0.25: 0.8126, picture_AP_0.25: 0.0451, showercurtrain_AP_0.25: 0.4767, mAP_0.25: 0.5446, chair_rec_0.25: 0.8238, window_rec_0.25: 0.5319, cabinet_rec_0.25: 0.6640, table_rec_0.25: 0.7771, garbagebin_rec_0.25: 0.5660, sofa_rec_0.25: 0.8969, sink_rec_0.25: 0.6837, counter_rec_0.25: 0.7308, desk_rec_0.25: 0.9134, bookshelf_rec_0.25: 0.8571, refrigerator_rec_0.25: 0.7018, door_rec_0.25: 0.6360, curtain_rec_0.25: 0.6119, bed_rec_0.25: 0.8642, toilet_rec_0.25: 0.9655, bathtub_rec_0.25: 0.8387, picture_rec_0.25: 0.1396, showercurtrain_rec_0.25: 0.6786, mAR_0.25: 0.7156, chair_AP_0.50: 0.4640, window_AP_0.50: 0.0264, cabinet_AP_0.50: 0.1552, table_AP_0.50: 0.3880, garbagebin_AP_0.50: 0.1654, sofa_AP_0.50: 0.4454, sink_AP_0.50: 0.1946, counter_AP_0.50: 0.1174, desk_AP_0.50: 0.4225, bookshelf_AP_0.50: 0.2841, refrigerator_AP_0.50: 0.2670, door_AP_0.50: 0.0858, curtain_AP_0.50: 0.0357, bed_AP_0.50: 0.7568, toilet_AP_0.50: 0.6932, bathtub_AP_0.50: 0.5601, picture_AP_0.50: 0.0010, showercurtrain_AP_0.50: 0.0136, mAP_0.50: 0.2820, chair_rec_0.50: 0.5629, window_rec_0.50: 0.1454, cabinet_rec_0.50: 0.3011, table_rec_0.50: 0.5286, garbagebin_rec_0.50: 0.2868, sofa_rec_0.50: 0.5567, sink_rec_0.50: 0.3469, counter_rec_0.50: 0.2692, desk_rec_0.50: 0.6457, bookshelf_rec_0.50: 0.5065, refrigerator_rec_0.50: 0.4211, door_rec_0.50: 0.2270, curtain_rec_0.50: 0.1343, bed_rec_0.50: 0.8025, toilet_rec_0.50: 0.7241, bathtub_rec_0.50: 0.6129, picture_rec_0.50: 0.0180, showercurtrain_rec_0.50: 0.1071, mAR_0.50: 0.3998
+2023-02-01 15:48:34,774 - mmdet - INFO - Epoch [12][50/901]	lr: 1.000e-06, eta: 0:25:07, time: 1.820, data_time: 0.073, memory: 10776, loss_occ: 0.3689, acc_occ: 0.9366, loss_centerness: 0.6196, loss_bbox: 0.2983, loss_cls: 0.1529, loss: 1.4397, grad_norm: 3.9034
+2023-02-01 15:50:02,711 - mmdet - INFO - Epoch [12][100/901]	lr: 1.000e-06, eta: 0:23:38, time: 1.759, data_time: 0.017, memory: 10776, loss_occ: 0.3599, acc_occ: 0.9314, loss_centerness: 0.6162, loss_bbox: 0.3008, loss_cls: 0.1593, loss: 1.4362, grad_norm: 3.9569
+2023-02-01 15:51:31,034 - mmdet - INFO - Epoch [12][150/901]	lr: 1.000e-06, eta: 0:22:09, time: 1.766, data_time: 0.017, memory: 10776, loss_occ: 0.3598, acc_occ: 0.9303, loss_centerness: 0.6150, loss_bbox: 0.3013, loss_cls: 0.1562, loss: 1.4323, grad_norm: 3.9177
+2023-02-01 15:52:59,565 - mmdet - INFO - Epoch [12][200/901]	lr: 1.000e-06, eta: 0:20:41, time: 1.771, data_time: 0.022, memory: 10776, loss_occ: 0.3592, acc_occ: 0.9302, loss_centerness: 0.6187, loss_bbox: 0.3042, loss_cls: 0.1574, loss: 1.4395, grad_norm: 3.8320
+2023-02-01 15:54:27,479 - mmdet - INFO - Epoch [12][250/901]	lr: 1.000e-06, eta: 0:19:12, time: 1.758, data_time: 0.017, memory: 10776, loss_occ: 0.3752, acc_occ: 0.9310, loss_centerness: 0.6203, loss_bbox: 0.3014, loss_cls: 0.1610, loss: 1.4580, grad_norm: 3.9206
+2023-02-01 15:55:55,859 - mmdet - INFO - Epoch [12][300/901]	lr: 1.000e-06, eta: 0:17:44, time: 1.768, data_time: 0.018, memory: 10776, loss_occ: 0.3686, acc_occ: 0.9331, loss_centerness: 0.6198, loss_bbox: 0.2948, loss_cls: 0.1525, loss: 1.4357, grad_norm: 3.9854
+2023-02-01 15:57:23,984 - mmdet - INFO - Epoch [12][350/901]	lr: 1.000e-06, eta: 0:16:15, time: 1.762, data_time: 0.018, memory: 10776, loss_occ: 0.3602, acc_occ: 0.9340, loss_centerness: 0.6198, loss_bbox: 0.2960, loss_cls: 0.1569, loss: 1.4329, grad_norm: 3.8283
+2023-02-01 15:58:51,987 - mmdet - INFO - Epoch [12][400/901]	lr: 1.000e-06, eta: 0:14:47, time: 1.760, data_time: 0.018, memory: 10776, loss_occ: 0.3664, acc_occ: 0.9346, loss_centerness: 0.6171, loss_bbox: 0.2877, loss_cls: 0.1622, loss: 1.4334, grad_norm: 4.0861
+2023-02-01 16:00:20,166 - mmdet - INFO - Epoch [12][450/901]	lr: 1.000e-06, eta: 0:13:18, time: 1.763, data_time: 0.019, memory: 10776, loss_occ: 0.3581, acc_occ: 0.9335, loss_centerness: 0.6134, loss_bbox: 0.3002, loss_cls: 0.1643, loss: 1.4359, grad_norm: 3.9061
+2023-02-01 16:01:48,031 - mmdet - INFO - Epoch [12][500/901]	lr: 1.000e-06, eta: 0:11:49, time: 1.757, data_time: 0.018, memory: 10776, loss_occ: 0.3751, acc_occ: 0.9355, loss_centerness: 0.6177, loss_bbox: 0.2991, loss_cls: 0.1633, loss: 1.4551, grad_norm: 4.2005
+2023-02-01 16:03:16,151 - mmdet - INFO - Epoch [12][550/901]	lr: 1.000e-06, eta: 0:10:21, time: 1.762, data_time: 0.018, memory: 10776, loss_occ: 0.3842, acc_occ: 0.9357, loss_centerness: 0.6145, loss_bbox: 0.2952, loss_cls: 0.1589, loss: 1.4527, grad_norm: 4.1730
+2023-02-01 16:04:44,392 - mmdet - INFO - Epoch [12][600/901]	lr: 1.000e-06, eta: 0:08:52, time: 1.765, data_time: 0.019, memory: 10776, loss_occ: 0.3620, acc_occ: 0.9310, loss_centerness: 0.6203, loss_bbox: 0.2984, loss_cls: 0.1585, loss: 1.4392, grad_norm: 4.0069
+2023-02-01 16:06:12,682 - mmdet - INFO - Epoch [12][650/901]	lr: 1.000e-06, eta: 0:07:24, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3659, acc_occ: 0.9346, loss_centerness: 0.6164, loss_bbox: 0.2946, loss_cls: 0.1556, loss: 1.4324, grad_norm: 3.9666
+2023-02-01 16:07:40,752 - mmdet - INFO - Epoch [12][700/901]	lr: 1.000e-06, eta: 0:05:55, time: 1.761, data_time: 0.019, memory: 10776, loss_occ: 0.3844, acc_occ: 0.9304, loss_centerness: 0.6170, loss_bbox: 0.2966, loss_cls: 0.1589, loss: 1.4569, grad_norm: 3.9163
+2023-02-01 16:09:09,123 - mmdet - INFO - Epoch [12][750/901]	lr: 1.000e-06, eta: 0:04:27, time: 1.767, data_time: 0.019, memory: 10776, loss_occ: 0.3678, acc_occ: 0.9319, loss_centerness: 0.6185, loss_bbox: 0.3033, loss_cls: 0.1587, loss: 1.4483, grad_norm: 3.8939
+2023-02-01 16:10:37,322 - mmdet - INFO - Epoch [12][800/901]	lr: 1.000e-06, eta: 0:02:58, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3607, acc_occ: 0.9321, loss_centerness: 0.6185, loss_bbox: 0.2995, loss_cls: 0.1526, loss: 1.4314, grad_norm: 4.0061
+2023-02-01 16:12:05,625 - mmdet - INFO - Epoch [12][850/901]	lr: 1.000e-06, eta: 0:01:30, time: 1.766, data_time: 0.019, memory: 10776, loss_occ: 0.3649, acc_occ: 0.9348, loss_centerness: 0.6190, loss_bbox: 0.3014, loss_cls: 0.1575, loss: 1.4428, grad_norm: 4.0632
+2023-02-01 16:13:33,837 - mmdet - INFO - Epoch [12][900/901]	lr: 1.000e-06, eta: 0:00:01, time: 1.764, data_time: 0.019, memory: 10776, loss_occ: 0.3514, acc_occ: 0.9315, loss_centerness: 0.6203, loss_bbox: 0.3072, loss_cls: 0.1627, loss: 1.4416, grad_norm: 3.8911
+2023-02-01 16:13:35,699 - mmdet - INFO - Saving checkpoint at 12 epochs
+2023-02-01 16:16:19,225 - mmdet - INFO - 
++----------------+---------+---------+---------+---------+
+| classes        | AP_0.25 | AR_0.25 | AP_0.50 | AR_0.50 |
++----------------+---------+---------+---------+---------+
+| chair          | 0.7483  | 0.8202  | 0.4645  | 0.5658  |
+| window         | 0.2466  | 0.5213  | 0.0294  | 0.1383  |
+| cabinet        | 0.4059  | 0.6640  | 0.1578  | 0.3118  |
+| table          | 0.5986  | 0.7857  | 0.3985  | 0.5371  |
+| garbagebin     | 0.3605  | 0.5736  | 0.1737  | 0.2868  |
+| sink           | 0.5750  | 0.6735  | 0.2450  | 0.3673  |
+| sofa           | 0.7558  | 0.8866  | 0.4566  | 0.5876  |
+| counter        | 0.4117  | 0.7308  | 0.0786  | 0.2115  |
+| refrigerator   | 0.5442  | 0.7368  | 0.2404  | 0.4035  |
+| door           | 0.4041  | 0.6510  | 0.0804  | 0.2420  |
+| desk           | 0.7093  | 0.9291  | 0.4387  | 0.6535  |
+| bookshelf      | 0.6009  | 0.8571  | 0.3289  | 0.5195  |
+| curtain        | 0.3372  | 0.6269  | 0.0426  | 0.1493  |
+| bed            | 0.8407  | 0.8519  | 0.7476  | 0.7901  |
+| bathtub        | 0.8147  | 0.8387  | 0.6165  | 0.6774  |
+| toilet         | 0.9518  | 0.9655  | 0.6883  | 0.7241  |
+| picture        | 0.0427  | 0.1351  | 0.0025  | 0.0315  |
+| showercurtrain | 0.4746  | 0.6786  | 0.0199  | 0.1429  |
++----------------+---------+---------+---------+---------+
+| Overall        | 0.5457  | 0.7181  | 0.2894  | 0.4078  |
++----------------+---------+---------+---------+---------+
+2023-02-01 16:16:19,260 - mmdet - INFO - Epoch(val) [12][901]	chair_AP_0.25: 0.7483, window_AP_0.25: 0.2466, cabinet_AP_0.25: 0.4059, table_AP_0.25: 0.5986, garbagebin_AP_0.25: 0.3605, sink_AP_0.25: 0.5750, sofa_AP_0.25: 0.7558, counter_AP_0.25: 0.4117, refrigerator_AP_0.25: 0.5442, door_AP_0.25: 0.4041, desk_AP_0.25: 0.7093, bookshelf_AP_0.25: 0.6009, curtain_AP_0.25: 0.3372, bed_AP_0.25: 0.8407, bathtub_AP_0.25: 0.8147, toilet_AP_0.25: 0.9518, picture_AP_0.25: 0.0427, showercurtrain_AP_0.25: 0.4746, mAP_0.25: 0.5457, chair_rec_0.25: 0.8202, window_rec_0.25: 0.5213, cabinet_rec_0.25: 0.6640, table_rec_0.25: 0.7857, garbagebin_rec_0.25: 0.5736, sink_rec_0.25: 0.6735, sofa_rec_0.25: 0.8866, counter_rec_0.25: 0.7308, refrigerator_rec_0.25: 0.7368, door_rec_0.25: 0.6510, desk_rec_0.25: 0.9291, bookshelf_rec_0.25: 0.8571, curtain_rec_0.25: 0.6269, bed_rec_0.25: 0.8519, bathtub_rec_0.25: 0.8387, toilet_rec_0.25: 0.9655, picture_rec_0.25: 0.1351, showercurtrain_rec_0.25: 0.6786, mAR_0.25: 0.7181, chair_AP_0.50: 0.4645, window_AP_0.50: 0.0294, cabinet_AP_0.50: 0.1578, table_AP_0.50: 0.3985, garbagebin_AP_0.50: 0.1737, sink_AP_0.50: 0.2450, sofa_AP_0.50: 0.4566, counter_AP_0.50: 0.0786, refrigerator_AP_0.50: 0.2404, door_AP_0.50: 0.0804, desk_AP_0.50: 0.4387, bookshelf_AP_0.50: 0.3289, curtain_AP_0.50: 0.0426, bed_AP_0.50: 0.7476, bathtub_AP_0.50: 0.6165, toilet_AP_0.50: 0.6883, picture_AP_0.50: 0.0025, showercurtrain_AP_0.50: 0.0199, mAP_0.50: 0.2894, chair_rec_0.50: 0.5658, window_rec_0.50: 0.1383, cabinet_rec_0.50: 0.3118, table_rec_0.50: 0.5371, garbagebin_rec_0.50: 0.2868, sink_rec_0.50: 0.3673, sofa_rec_0.50: 0.5876, counter_rec_0.50: 0.2115, refrigerator_rec_0.50: 0.4035, door_rec_0.50: 0.2420, desk_rec_0.50: 0.6535, bookshelf_rec_0.50: 0.5195, curtain_rec_0.50: 0.1493, bed_rec_0.50: 0.7901, bathtub_rec_0.50: 0.6774, toilet_rec_0.50: 0.7241, picture_rec_0.50: 0.0315, showercurtrain_rec_0.50: 0.1429, mAR_0.50: 0.4078
